@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 
+// Permite reprodução imediata de áudio/vídeo embutido sem bloqueios de gesto
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 let mainWindow;
 
 function createWindow() {

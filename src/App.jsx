@@ -206,8 +206,13 @@ export default function App() {
 
                 {activeTab === 'guilda' && (
                   <GuildView
+                    user={user}
                     profile={profile}
                     onGoToProfile={() => setActiveTab('perfil')}
+                    onAddNewGame={() => {
+                      setEditingGame(null);
+                      setActiveTab('adicionar');
+                    }}
                   />
                 )}
 

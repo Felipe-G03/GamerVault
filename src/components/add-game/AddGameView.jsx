@@ -310,95 +310,123 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit, on
             <select
               value={selectedGame.status}
               onChange={(e) => setSelectedGame({ ...selectedGame, status: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white focus:outline-none focus:border-orange-500"
+              className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white focus:outline-none focus:border-orange-500 cursor-pointer"
             >
               <option value="Finalizado">Finalizado</option>
-              <option value="Quero Jogar">Quero Jogar</option>
-              <option value="Jogando">Jogando</option>
-              <option value="Abandonado">Abandonado</option>
+              <option value="Quero Jogar">Quero Jogar (Backlog / Desejo)</option>
             </select>
           </div>
 
-          {/* DATA DE CONCLUSÃO */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
-              DATA DE CONCLUSÃO
-            </label>
-            <input
-              type="date"
-              value={selectedGame.dateFinished}
-              onChange={(e) => setSelectedGame({ ...selectedGame, dateFinished: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white focus:outline-none focus:border-orange-500"
-            />
-          </div>
+          {/* CAMPOS ESPECÍFICOS DE JOGO FINALIZADO */}
+          {selectedGame.status === 'Finalizado' ? (
+            <>
+              {/* DATA DE CONCLUSÃO */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
+                  DATA DE CONCLUSÃO
+                </label>
+                <input
+                  type="date"
+                  value={selectedGame.dateFinished}
+                  onChange={(e) => setSelectedGame({ ...selectedGame, dateFinished: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white focus:outline-none focus:border-orange-500"
+                />
+              </div>
 
-          {/* TEMPO DE JOGO */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
-              TEMPO DE JOGO (EM HORAS)
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: 85"
-              value={selectedGame.playtime}
-              onChange={(e) => setSelectedGame({ ...selectedGame, playtime: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
-            />
-          </div>
+              {/* TEMPO DE JOGO */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
+                  TEMPO DE JOGO (EM HORAS)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: 85"
+                  value={selectedGame.playtime}
+                  onChange={(e) => setSelectedGame({ ...selectedGame, playtime: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                />
+              </div>
 
-          {/* SUA NOTA (1-10) */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
-                SUA NOTA (1-10)
-              </label>
-              <span className="text-sm font-bold text-accent-bright font-mono">
-                {selectedGame.rating} / 10
-              </span>
+              {/* SUA NOTA (1-10) */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
+                    SUA NOTA (1-10)
+                  </label>
+                  <span className="text-sm font-bold text-accent-bright font-mono">
+                    {selectedGame.rating} / 10
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="0.1"
+                  value={selectedGame.rating || 8}
+                  onChange={(e) => setSelectedGame({ ...selectedGame, rating: parseFloat(e.target.value) })}
+                  className="w-full h-2 bg-surface-high rounded-lg appearance-none cursor-pointer accent-accent-bright"
+                />
+              </div>
+
+              {/* SUA ANÁLISE */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
+                  SUA ANÁLISE
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="Escreva sua opinião crítica sobre o jogo..."
+                  value={selectedGame.review}
+                  onChange={(e) => setSelectedGame({ ...selectedGame, review: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 resize-y"
+                ></textarea>
+              </div>
+
+              {/* LINKS DAS SCREENSHOTS */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
+                  LINKS DAS SCREENSHOTS
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Cole um link por linha..."
+                  value={selectedGame.screenshotsText}
+                  onChange={(e) => setSelectedGame({ ...selectedGame, screenshotsText: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-xs text-white font-mono placeholder-gray-500 focus:outline-none focus:border-orange-500 resize-y"
+                ></textarea>
+                <span className="text-[11px] text-gray-400 block italic">
+                  Dica: Links do Google Drive são convertidos automaticamente.
+                </span>
+              </div>
+            </>
+          ) : (
+            /* MODO QUERO JOGAR (Campos simplificados) */
+            <div className="p-4 rounded-xl bg-surface-container/60 border border-border/80 space-y-4">
+              <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono">
+                <CheckCircle className="w-4 h-4" />
+                <span>Modo Backlog / Desejo ativado</span>
+              </div>
+              <p className="text-xs text-gray-400">
+                Este jogo será guardado na sua lista de desejos. Quando você zerá-lo futuramente, basta editar o status para "Finalizado" para registrar suas horas, nota e review!
+              </p>
+
+              {/* Anotações de Expectativa (Opcional) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
+                  POR QUE VOCÊ QUER JOGAR? (OPCIONAL)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Ex: Recomendação de amigos, aguardando promoção, trailer incrível..."
+                  value={selectedGame.review}
+                  onChange={(e) => setSelectedGame({ ...selectedGame, review: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 resize-y"
+                ></textarea>
+              </div>
             </div>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              step="0.1"
-              value={selectedGame.rating}
-              onChange={(e) => setSelectedGame({ ...selectedGame, rating: parseFloat(e.target.value) })}
-              className="w-full h-2 bg-surface-high rounded-lg appearance-none cursor-pointer accent-accent-bright"
-            />
-          </div>
+          )}
 
-          {/* SUA ANÁLISE */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
-              SUA ANÁLISE
-            </label>
-            <textarea
-              rows={4}
-              placeholder="Escreva sua opinião crítica sobre o jogo..."
-              value={selectedGame.review}
-              onChange={(e) => setSelectedGame({ ...selectedGame, review: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 resize-y"
-            ></textarea>
-          </div>
-
-          {/* LINKS DAS SCREENSHOTS */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
-              LINKS DAS SCREENSHOTS
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Cole um link por linha..."
-              value={selectedGame.screenshotsText}
-              onChange={(e) => setSelectedGame({ ...selectedGame, screenshotsText: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-xs text-white font-mono placeholder-gray-500 focus:outline-none focus:border-orange-500 resize-y"
-            ></textarea>
-            <span className="text-[11px] text-gray-400 block italic">
-              Dica: Links do Google Drive são convertidos automaticamente.
-            </span>
-          </div>
-
-          {/* TRILHA SONORA TEMA (NOVO) */}
+          {/* TRILHA SONORA TEMA */}
           <div className="space-y-1.5">
             <label className="text-xs font-mono uppercase text-accent-bright font-semibold flex items-center gap-1.5">
               <Music className="w-3.5 h-3.5" />
