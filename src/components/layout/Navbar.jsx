@@ -1,7 +1,7 @@
 import React from 'react';
-import { Gamepad2, PlusCircle, Users, BarChart3, User, LogOut, Settings } from 'lucide-react';
+import { Gamepad2, PlusCircle, Users, BarChart3, User, LogOut } from 'lucide-react';
 
-export default function Navbar({ activeTab, setActiveTab, profile, onLogout, onOpenSettings }) {
+export default function Navbar({ activeTab, setActiveTab, profile, onLogout }) {
   const tabs = [
     { id: 'vault', label: 'Vault', icon: Gamepad2 },
     { id: 'adicionar', label: 'Adicionar Jogo', icon: PlusCircle },
@@ -18,17 +18,10 @@ export default function Navbar({ activeTab, setActiveTab, profile, onLogout, onO
         <div className="flex items-center gap-2 self-start md:self-auto order-2 md:order-1">
           <button
             onClick={onLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-900/40 hover:bg-red-800/60 border border-red-700/60 text-red-200 text-xs font-semibold tracking-wide transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-800/60 border border-red-700/60 text-red-200 text-xs font-semibold tracking-wide transition-all shadow-sm active:scale-95"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sair</span>
-          </button>
-          <button
-            onClick={onOpenSettings}
-            className="p-1.5 rounded bg-surface-container hover:bg-surface-high border border-border text-gray-400 hover:text-white transition-colors"
-            title="Configurações (Firebase e RAWG)"
-          >
-            <Settings className="w-4 h-4" />
           </button>
         </div>
 

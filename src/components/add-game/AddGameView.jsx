@@ -14,7 +14,7 @@ import {
 import { searchRawgGames, getRawgApiKey } from '../../config/rawg';
 import { parseScreenshotUrls } from '../../services/driveUtils';
 
-export default function AddGameView({ onGameAdded, editingGame, onCancelEdit, onOpenSettings }) {
+export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) {
   const [step, setStep] = useState(editingGame ? 2 : 1);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -201,15 +201,6 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit, on
             <div className="flex items-center gap-2 p-3 rounded-xl bg-red-950/30 border border-red-800/40 text-red-300 text-xs">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{searchError}</span>
-              {searchError.includes('RAWG') && (
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="ml-auto underline font-bold hover:text-white"
-                >
-                  Abrir Configurações
-                </button>
-              )}
             </div>
           )}
 

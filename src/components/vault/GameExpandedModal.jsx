@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Clock,
@@ -16,10 +16,53 @@ import { parseScreenshotUrls } from '../../services/driveUtils';
 
 export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
   const [selectedScreenshot, setSelectedScreenshot] = useState(null);
+  const [dominantColor, setDominantColor] = useState('61, 214, 155'); // Padrão verde neon
 
   if (!game) return null;
 
   const screenshotsList = parseScreenshotUrls(game.screenshots);
+
+  // Extrai dinamicamente a cor predominante da capa do jogo
+  useEffect(() => {
+    if (!game.imageUrl) return;
+
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = game.imageUrl;
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 30;
+        canvas.height = 30;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 30, 30);
+        const data = ctx.getImageData(0, 0, 30, 30).data;
+
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 16) {
+          const cr = data[i];
+          const cg = data[i + 1];
+          const cb = data[i + 2];
+          // Evita pixels quase pretos ou brancos puros para capturar cores vibrantes
+          const brightness = (cr * 299 + cg * 587 + cb * 114) / 1000;
+          if (brightness > 30 && brightness < 225) {
+            r += cr;
+            g += cg;
+            b += cb;
+            count++;
+          }
+        }
+
+        if (count > 0) {
+          setDominantColor(`${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)}`);
+        }
+      } catch (err) {
+        // Fallback sutil em caso de restrição CORS
+        setDominantColor('61, 214, 155');
+      }
+    };
+  }, [game.imageUrl]);
 
   const getRatingBadgeClass = (score) => {
     const num = Number(score);
@@ -31,7 +74,18 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl overflow-y-auto">
+      {/* Halo de Brilho & Vidro com a cor predominante do jogo */}
+      <div
+        className="fixed inset-0 pointer-events-none transition-all duration-700 opacity-35 blur-[120px] scale-105"
+        style={{
+          backgroundImage: game.imageUrl ? `url(${game.imageUrl})` : undefined,
+          backgroundColor: `rgba(${dominantColor}, 0.3)`,
+          backgroundPosition: 'center',
+          backgroundSize: 'cover'
+        }}
+      />
+
       {/* Lightbox para Screenshot Expandida */}
       {selectedScreenshot && (
         <div
@@ -52,23 +106,38 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
         </div>
       )}
 
-      {/* Janela Principal Modal */}
-      <div className="relative w-full max-w-4xl bg-[#0e1017] border border-border rounded-2xl overflow-hidden shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-200">
+      {/* Janela Principal Modal - Vidro Translúcido Glassmorphism */}
+      <div
+        className="relative w-full max-w-4xl rounded-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 transition-all"
+        style={{
+          background: `linear-gradient(155deg, rgba(${dominantColor}, 0.22) 0%, rgba(13, 15, 23, 0.88) 40%, rgba(7, 8, 14, 0.96) 100%)`,
+          backdropFilter: 'blur(32px)',
+          WebkitBackdropFilter: 'blur(32px)',
+          border: `1px solid rgba(${dominantColor}, 0.35)`,
+          boxShadow: `0 25px 70px -15px rgba(0, 0, 0, 0.95), 0 0 35px -5px rgba(${dominantColor}, 0.3)`
+        }}
+      >
         {/* Banner do Jogo */}
-        <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-surface-container">
+        <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-black/40">
           {game.imageUrl && (
             <img
               src={game.imageUrl}
               alt={game.title}
-              className="w-full h-full object-cover object-top filter brightness-75"
+              className="w-full h-full object-cover object-top filter brightness-85"
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e1017] via-[#0e1017]/50 to-transparent" />
+          <div
+            className="absolute inset-0 bg-gradient-to-t via-black/40 to-transparent"
+            style={{
+              backgroundImage: `linear-gradient(to top, rgba(7, 8, 14, 0.95) 0%, rgba(13, 15, 23, 0.5) 50%, transparent 100%)`
+            }}
+          />
 
           {/* Botão Fechar */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 text-gray-300 hover:text-white border border-white/10 backdrop-blur-md transition-all"
+            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 hover:bg-black/90 text-gray-300 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-95"
+            title="Fechar (ESC)"
           >
             <X className="w-5 h-5" />
           </button>
@@ -77,16 +146,24 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           <div className="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-accent/20 border border-accent/40 text-accent-bright text-xs font-semibold">
+                <span
+                  className="px-2.5 py-0.5 rounded-full text-xs font-semibold backdrop-blur-md"
+                  style={{
+                    backgroundColor: `rgba(${dominantColor}, 0.25)`,
+                    borderColor: `rgba(${dominantColor}, 0.5)`,
+                    borderWidth: '1px',
+                    color: '#ffffff'
+                  }}
+                >
                   {game.status || 'Finalizado'}
                 </span>
                 {game.genre && (
-                  <span className="text-xs text-gray-300 font-mono">
+                  <span className="text-xs text-gray-200 font-mono drop-shadow">
                     {game.genre}
                   </span>
                 )}
               </div>
-              <h2 className="text-2xl sm:text-4xl font-gamer font-extrabold text-white tracking-wide">
+              <h2 className="text-2xl sm:text-4xl font-gamer font-extrabold text-white tracking-wide drop-shadow-md">
                 {game.title}
               </h2>
             </div>
@@ -95,9 +172,9 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
             {game.rating > 0 && (
               <div className="flex items-center gap-3">
                 <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-mono uppercase text-gray-400">Sua Nota</span>
+                  <span className="text-[10px] font-mono uppercase text-gray-300 drop-shadow">Sua Nota</span>
                   <div
-                    className={`w-14 h-14 rounded-full flex items-center justify-center font-extrabold text-xl ${getRatingBadgeClass(
+                    className={`w-14 h-14 rounded-full flex items-center justify-center font-extrabold text-xl shadow-2xl ${getRatingBadgeClass(
                       game.rating
                     )}`}
                   >
@@ -109,7 +186,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           </div>
         </div>
 
-        {/* Player de Trilha Sonora Tema In-App (Se houver themeUrl) */}
+        {/* Player de Trilha Sonora Tema In-App (Autoplay ao abrir o card) */}
         {game.themeUrl && (
           <div className="px-6 pt-4">
             <YouTubeThemePlayer themeUrl={game.themeUrl} gameTitle={game.title} />
@@ -120,7 +197,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
         <div className="p-6 space-y-6">
           {/* Métricas Rápidas (Tempo, Data, Metacritic) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 rounded-xl bg-surface-container border border-border flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center gap-3">
               <Clock className="w-5 h-5 text-amber-500" />
               <div>
                 <span className="text-[10px] font-mono uppercase text-gray-400">Tempo Jogado</span>
@@ -128,7 +205,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-surface-container border border-border flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center gap-3">
               <Calendar className="w-5 h-5 text-cyan-400" />
               <div>
                 <span className="text-[10px] font-mono uppercase text-gray-400">Data de Conclusão</span>
@@ -136,7 +213,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-surface-container border border-border flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center gap-3">
               <Star className="w-5 h-5 text-yellow-400" />
               <div>
                 <span className="text-[10px] font-mono uppercase text-gray-400">Metacritic</span>
@@ -144,7 +221,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-surface-container border border-border flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center gap-3">
               <Tag className="w-5 h-5 text-emerald-400" />
               <div>
                 <span className="text-[10px] font-mono uppercase text-gray-400">Gêneros</span>
@@ -154,9 +231,12 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           </div>
 
           {/* Análise / Review Crítica */}
-          <div className="p-5 rounded-xl bg-surface-container/60 border border-border">
-            <h4 className="text-xs font-mono uppercase tracking-wider text-accent-bright mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-accent-bright"></span>
+          <div className="p-5 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md">
+            <h4
+              className="text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 font-semibold"
+              style={{ color: `rgb(${dominantColor})` }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: `rgb(${dominantColor})` }}></span>
               Sua Análise Crítica
             </h4>
             {game.review && game.review.trim() ? (
@@ -173,7 +253,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           {/* Galeria de Screenshots */}
           {screenshotsList.length > 0 && (
             <div>
-              <h4 className="text-xs font-mono uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
+              <h4 className="text-xs font-mono uppercase tracking-wider text-gray-300 mb-3 flex items-center gap-2">
                 <ImageIcon className="w-4 h-4 text-cyan-400" />
                 Screenshots & Memórias ({screenshotsList.length})
               </h4>
@@ -182,7 +262,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
                   <div
                     key={idx}
                     onClick={() => setSelectedScreenshot(url)}
-                    className="group relative aspect-video rounded-lg overflow-hidden bg-surface-high border border-border hover:border-accent-bright/60 cursor-pointer shadow transition-all"
+                    className="group relative aspect-video rounded-lg overflow-hidden bg-black/50 border border-white/10 hover:border-cyan-400/80 cursor-pointer shadow transition-all"
                   >
                     <img
                       src={url}
@@ -202,12 +282,12 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           {/* Tags do Jogo */}
           {Array.isArray(game.tags) && game.tags.length > 0 && (
             <div className="pt-2">
-              <h4 className="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-2">Tags do RAWG</h4>
+              <h4 className="text-[11px] font-mono uppercase tracking-wider text-gray-400 mb-2">Tags do RAWG</h4>
               <div className="flex flex-wrap gap-1.5">
                 {game.tags.slice(0, 18).map((tag, i) => (
                   <span
                     key={i}
-                    className="px-2 py-0.5 rounded bg-surface border border-border text-[10px] font-mono text-gray-400"
+                    className="px-2 py-0.5 rounded bg-black/40 border border-white/10 text-[10px] font-mono text-gray-300"
                   >
                     #{tag}
                   </span>
@@ -217,7 +297,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           )}
 
           {/* Rodapé de Ações (Editar e Deletar) */}
-          <div className="flex items-center justify-between pt-4 border-t border-border">
+          <div className="flex items-center justify-between pt-4 border-t border-white/10">
             <button
               onClick={() => {
                 if (window.confirm(`Tem certeza que deseja excluir "${game.title}" do seu Vault?`)) {
@@ -225,7 +305,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
                   onClose();
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-red-300 text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-950/50 hover:bg-red-900/70 border border-red-800/60 text-red-300 text-xs font-medium transition-colors"
             >
               <Trash2 className="w-4 h-4" />
               <span>Excluir do Vault</span>
@@ -236,7 +316,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
                 onClose();
                 onEdit(game);
               }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-high hover:bg-surface-higher border border-border text-white text-xs font-semibold transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold transition-colors backdrop-blur-md"
             >
               <Edit3 className="w-4 h-4" />
               <span>Editar Detalhes</span>

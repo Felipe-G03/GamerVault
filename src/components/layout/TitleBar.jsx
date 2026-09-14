@@ -28,7 +28,7 @@ export default function TitleBar() {
           <span className="text-[11px] font-gamer text-white tracking-widest uppercase">Gamer's Vault</span>
         </div>
         <span className="hidden sm:inline text-[10px] text-gray-500 border-l border-border/80 pl-2.5">
-          v4.2.0 DESKTOP
+          v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0'} DESKTOP
         </span>
         <div className="hidden md:flex items-center gap-1.5 text-[10px] text-gray-400">
           <span className="w-1.5 h-1.5 rounded-full bg-accent-bright shadow-[0_0_8px_#3dd69b]"></span>

@@ -243,16 +243,6 @@ export default function AuthModal({ onAuthSuccess, onOpenSettings }) {
             </button>
           </div>
         )}
-
-        <div className="border-t border-border pt-4 text-center">
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            className="text-[11px] font-mono text-cyan-400 hover:underline"
-          >
-            ⚙ Configurar chaves do Firebase & RAWG
-          </button>
-        </div>
       </div>
     </div>
   );

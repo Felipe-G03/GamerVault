@@ -130,7 +130,7 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/60 pb-5">
         <div>
           <span className="text-[10px] font-mono tracking-widest text-accent-bright uppercase block mb-1">
-            REGISTRO DE CAMPANHAS // V2.4 LOG
+            REGISTRO DE CAMPANHAS // V2.0 LOG
           </span>
           <h2 className="text-2xl sm:text-3xl font-gamer font-extrabold text-white tracking-wide">
             Atividade da Guilda

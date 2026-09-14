@@ -12,7 +12,6 @@ import GuildView from './components/guild/GuildView';
 import StatsView from './components/stats/StatsView';
 import ProfileView from './components/profile/ProfileView';
 import AuthModal from './components/auth/AuthModal';
-import SettingsModal from './components/settings/SettingsModal';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -24,7 +23,6 @@ export default function App() {
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [loadingGames, setLoadingGames] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Monitora o estado de autenticação
   useEffect(() => {
@@ -155,7 +153,6 @@ export default function App() {
       {!user ? (
         <AuthModal
           onAuthSuccess={handleAuthSuccess}
-          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       ) : (
         <>
@@ -168,7 +165,6 @@ export default function App() {
             }}
             profile={profile}
             onLogout={handleLogout}
-            onOpenSettings={() => setIsSettingsOpen(true)}
           />
 
           {/* Área de Visualização das Abas */}
@@ -200,7 +196,6 @@ export default function App() {
                       setEditingGame(null);
                       setActiveTab('vault');
                     }}
-                    onOpenSettings={() => setIsSettingsOpen(true)}
                   />
                 )}
 
@@ -231,16 +226,6 @@ export default function App() {
             )}
           </main>
         </>
-      )}
-
-      {/* Modal de Configurações */}
-      {isSettingsOpen && (
-        <SettingsModal
-          onClose={() => setIsSettingsOpen(false)}
-          onSaved={() => {
-            if (user?.uid) loadUserProfile(user.uid, user.email);
-          }}
-        />
       )}
     </div>
   );
