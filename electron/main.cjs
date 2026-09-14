@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, session } = require('electron');
 const path = require('path');
 
 // Permite reprodução imediata de áudio/vídeo embutido sem bloqueios de gesto
@@ -28,7 +28,6 @@ function createWindow() {
   const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
-    // mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
@@ -52,13 +51,10 @@ function createWindow() {
     if (mainWindow) mainWindow.close();
   });
 
-  // Links externos abrem no navegador do sistema, EXCETO iframes internos (como YouTube embed)
+  // Qualquer link externo clicado abre diretamente no navegador do sistema operacional (Chrome, Edge, etc.)
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://rawg.io') || url.startsWith('https://store.steampowered.com')) {
-      shell.openExternal(url);
-      return { action: 'deny' };
-    }
-    return { action: 'allow' };
+    shell.openExternal(url);
+    return { action: 'deny' };
   });
 
   mainWindow.on('closed', () => {
@@ -67,6 +63,17 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Corrige o Erro 150/153 do YouTube no Electron ao rodar empacotado (file://)
+  // Injeta headers de Referer e Origin válidos exigidos pelo YouTube para embeds
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.googlevideo.com/*'] },
+    (details, callback) => {
+      details.requestHeaders['Origin'] = 'https://www.youtube-nocookie.com';
+      details.requestHeaders['Referer'] = 'https://www.youtube-nocookie.com/';
+      callback({ cancel: false, requestHeaders: details.requestHeaders });
+    }
+  );
+
   createWindow();
 
   app.on('activate', () => {

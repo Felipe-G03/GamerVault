@@ -13,10 +13,28 @@ import {
 } from 'lucide-react';
 import YouTubeThemePlayer from '../common/YouTubeThemePlayer';
 import { parseScreenshotUrls } from '../../services/driveUtils';
+import { searchGameTheme } from '../../services/youtubeService';
 
 export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
   const [selectedScreenshot, setSelectedScreenshot] = useState(null);
   const [dominantColor, setDominantColor] = useState('61, 214, 155'); // Padrão verde neon
+  const [activeThemeUrl, setActiveThemeUrl] = useState(game?.themeUrl || null);
+
+  // Busca automática da trilha sonora tema caso o jogo não possua link gravado
+  useEffect(() => {
+    setActiveThemeUrl(game?.themeUrl || null);
+    if (!game?.themeUrl && game?.title) {
+      let isMounted = true;
+      searchGameTheme(game.title).then((url) => {
+        if (isMounted && url) {
+          setActiveThemeUrl(url);
+        }
+      });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [game?.id, game?.themeUrl, game?.title]);
 
   if (!game) return null;
 
@@ -187,9 +205,9 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
         </div>
 
         {/* Player de Trilha Sonora Tema In-App (Autoplay ao abrir o card) */}
-        {game.themeUrl && (
+        {activeThemeUrl && (
           <div className="px-6 pt-4">
-            <YouTubeThemePlayer themeUrl={game.themeUrl} gameTitle={game.title} />
+            <YouTubeThemePlayer themeUrl={activeThemeUrl} gameTitle={game.title} />
           </div>
         )}
 

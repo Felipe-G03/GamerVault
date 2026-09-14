@@ -19,7 +19,8 @@ export function extractYouTubeId(url) {
 }
 
 export default function YouTubeThemePlayer({ themeUrl, gameTitle }) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  // Inicia tocando automaticamente ao abrir o modal
+  const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const audioRef = useRef(null);
@@ -115,11 +116,10 @@ export default function YouTubeThemePlayer({ themeUrl, gameTitle }) {
             <iframe
               id="gamervault-yt-player"
               className="w-full h-full"
-              src={`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1&autoplay=${isPlaying ? 1 : 0}&mute=0&rel=0&origin=${encodeURIComponent(
-                typeof window !== 'undefined' ? window.location.origin : '*'
-              )}`}
+              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=${isPlaying ? 1 : 0}&mute=0&rel=0&playsinline=1&enablejsapi=1&origin=https%3A%2F%2Fwww.youtube-nocookie.com`}
               title="YouTube Game Soundtrack Player"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
             ></iframe>
           </div>

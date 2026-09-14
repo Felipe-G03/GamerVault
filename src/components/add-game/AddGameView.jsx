@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { searchRawgGames, getRawgApiKey } from '../../config/rawg';
 import { parseScreenshotUrls } from '../../services/driveUtils';
+import { searchGameTheme } from '../../services/youtubeService';
 
 export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) {
   const [step, setStep] = useState(editingGame ? 2 : 1);
@@ -20,6 +21,7 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [isFetchingTheme, setIsFetchingTheme] = useState(false);
 
   // Estado do formulário no Passo 2
   const [selectedGame, setSelectedGame] = useState(
@@ -98,6 +100,31 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
       themeUrl: ''
     });
     setStep(2);
+
+    // Busca automaticamente a música tema na API do YouTube v3
+    setIsFetchingTheme(true);
+    searchGameTheme(game.title)
+      .then((url) => {
+        if (url) {
+          setSelectedGame((prev) => ({ ...prev, themeUrl: url }));
+        }
+      })
+      .finally(() => {
+        setIsFetchingTheme(false);
+      });
+  };
+
+  const handleSearchThemeManual = async () => {
+    if (!selectedGame.title || isFetchingTheme) return;
+    setIsFetchingTheme(true);
+    try {
+      const url = await searchGameTheme(selectedGame.title);
+      if (url) {
+        setSelectedGame((prev) => ({ ...prev, themeUrl: url }));
+      }
+    } finally {
+      setIsFetchingTheme(false);
+    }
   };
 
   const handleSave = async (e) => {
@@ -419,20 +446,57 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
 
           {/* TRILHA SONORA TEMA */}
           <div className="space-y-1.5">
-            <label className="text-xs font-mono uppercase text-accent-bright font-semibold flex items-center gap-1.5">
-              <Music className="w-3.5 h-3.5" />
-              MÚSICA TEMA DO JOGO (YOUTUBE OU ÁUDIO)
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: https://www.youtube.com/watch?v=..."
-              value={selectedGame.themeUrl || ''}
-              onChange={(e) => setSelectedGame({ ...selectedGame, themeUrl: e.target.value })}
-              className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-xs text-white font-mono placeholder-gray-500 focus:outline-none focus:border-accent-bright"
-            />
-            <span className="text-[11px] text-gray-400 block">
-              Toca diretamente na visão expandida do jogo sem abrir navegador externo.
-            </span>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-mono uppercase text-accent-bright font-semibold flex items-center gap-1.5">
+                <Music className="w-3.5 h-3.5" />
+                MÚSICA TEMA DO JOGO (YOUTUBE OU ÁUDIO)
+              </label>
+              <button
+                type="button"
+                onClick={handleSearchThemeManual}
+                disabled={isFetchingTheme || !selectedGame.title}
+                className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors disabled:opacity-40"
+              >
+                {isFetchingTheme ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+                    Buscando OST...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-3 h-3" />
+                    {selectedGame.themeUrl ? 'Rebuscar na API' : 'Buscar na API'}
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Ex: https://www.youtube.com/watch?v=..."
+                value={selectedGame.themeUrl || ''}
+                onChange={(e) => setSelectedGame({ ...selectedGame, themeUrl: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-xs text-white font-mono placeholder-gray-500 focus:outline-none focus:border-accent-bright"
+              />
+              {isFetchingTheme && (
+                <div className="absolute right-3 top-2.5 flex items-center gap-1.5 text-xs text-cyan-400 font-mono">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="text-[10px]">Buscando tema...</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-400">
+                Preenchido automaticamente via YouTube Data API v3. Toca direto no app.
+              </span>
+              {selectedGame.themeUrl && !isFetchingTheme && (
+                <span className="text-accent-bright font-mono text-[10px] flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> Tema pronto
+                </span>
+              )}
+            </div>
           </div>
 
           {saveError && (
