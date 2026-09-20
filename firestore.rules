@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Configurações do Aplicativo (Versão, Changelog e Link de Atualização)
+    // Leitura pública liberada para qualquer cliente verificar atualizações; escrita bloqueada (apenas console)
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Regra para os jogos de cada utilizador
+    match /users/{userId}/games/{gameId} {
+      // Qualquer utilizador autenticado pode ler os dados dos jogos (para o feed da guilda).
+      allow read: if request.auth != null;
+      // Apenas o proprietário pode escrever (criar, editar, apagar) os seus próprios jogos.
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Regra para os perfis (nickname e lista de amigos)
+    match /profiles/{userId} {
+      // Qualquer utilizador autenticado pode ler o perfil (para ver nicknames e listas de amigos).
+      allow read: if request.auth != null;
+      // Apenas o proprietário pode criar ou atualizar o seu próprio perfil.
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

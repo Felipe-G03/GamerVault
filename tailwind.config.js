@@ -10,20 +10,20 @@ export default {
       colors: {
         background: 'var(--bg-primary, #07080c)',
         surface: {
-          DEFAULT: 'var(--surface-dark, #10121a)',
-          low: 'var(--surface-low, #0a0c10)',
-          container: 'var(--surface-container, #161822)',
-          high: 'var(--surface-high, #1f2230)',
-          higher: 'var(--surface-higher, #2b2f42)'
+          DEFAULT: '#10121a',
+          low: '#0a0c10',
+          container: '#161822',
+          high: '#1f2230',
+          higher: '#2b2f42'
         },
         border: {
-          DEFAULT: 'var(--border-default, #262a3b)',
-          subtle: 'var(--border-subtle, #181b26)',
-          bright: 'var(--border-bright, #3d435d)'
+          DEFAULT: '#262a3b',
+          subtle: '#181b26',
+          bright: '#3d435d'
         },
         accent: {
-          DEFAULT: 'var(--accent-primary, #10b981)',
-          bright: 'var(--accent-bright, #3dd69b)',
+          DEFAULT: 'rgba(var(--accent-rgb, 16, 185, 129), <alpha-value>)',
+          bright: 'rgba(var(--accent-bright-rgb, 61, 214, 155), <alpha-value>)',
           glow: 'var(--accent-glow, rgba(61, 214, 155, 0.25))',
           subtle: 'var(--accent-subtle, #0d3829)'
         },

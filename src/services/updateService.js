@@ -36,13 +36,18 @@ export function compareVersions(v1, v2) {
  * @returns {Promise<{ hasUpdate: boolean, latestVersion: string, downloadUrl: string, changelog: string, releaseDate: string } | null>}
  */
 export async function checkAppUpdate(currentVersion = '2.0.0') {
-  if (!db) return null;
+  if (!db) {
+    console.warn('[UpdateChecker] Firebase DB não inicializado.');
+    return null;
+  }
 
   try {
+    console.log(`[UpdateChecker] Verificando se há atualizações para a versão atual: v${currentVersion}...`);
     const configRef = doc(db, 'config', 'app');
     const snap = await getDoc(configRef);
 
     if (!snap.exists()) {
+      console.warn('[UpdateChecker] Documento config/app não foi encontrado no Firestore.');
       return null;
     }
 
@@ -52,11 +57,15 @@ export async function checkAppUpdate(currentVersion = '2.0.0') {
     const changelog = data.changelog || '';
     const releaseDate = data.releaseDate || '';
 
+    console.log('[UpdateChecker] Dados encontrados no Firestore:', { latestVersion, downloadUrl });
+
     if (!latestVersion) {
+      console.warn('[UpdateChecker] Campo latestVersion vazio no documento config/app.');
       return null;
     }
 
     const hasUpdate = compareVersions(latestVersion, currentVersion) > 0;
+    console.log(`[UpdateChecker] Comparação: latest(${latestVersion}) > current(${currentVersion})? -> ${hasUpdate}`);
 
     return {
       hasUpdate,
@@ -67,7 +76,7 @@ export async function checkAppUpdate(currentVersion = '2.0.0') {
       releaseDate
     };
   } catch (error) {
-    console.warn('Não foi possível verificar atualizações no momento:', error);
+    console.error('[UpdateChecker] Erro ao buscar documento config/app no Firestore:', error);
     return null;
   }
 }
