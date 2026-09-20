@@ -1,5 +1,7 @@
 const { app, BrowserWindow, ipcMain, shell, session } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const { spawn } = require('child_process');
 
 // Permite reprodução imediata de áudio/vídeo embutido sem bloqueios de gesto
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -49,6 +51,89 @@ function createWindow() {
 
   ipcMain.on('window-close', () => {
     if (mainWindow) mainWindow.close();
+  });
+
+  // Handler para download e execução do instalador da nova versão
+  ipcMain.on('start-download-update', async (_event, downloadUrl) => {
+    if (!downloadUrl) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-download-error', 'URL de download não informada.');
+      }
+      return;
+    }
+
+    try {
+      const tempDir = app.getPath('temp');
+      const updateFilePath = path.join(tempDir, 'GamerVault-Update-Setup.exe');
+
+      const res = await fetch(downloadUrl);
+      if (!res.ok) {
+        throw new Error(`Servidor retornou HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const totalBytes = parseInt(res.headers.get('content-length') || '0', 10);
+      let downloadedBytes = 0;
+
+      const fileStream = fs.createWriteStream(updateFilePath);
+      const reader = res.body.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        fileStream.write(Buffer.from(value));
+        downloadedBytes += value.length;
+
+        const percent = totalBytes > 0 ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('update-download-progress', {
+            percent,
+            downloadedBytes,
+            totalBytes
+          });
+        }
+      }
+
+      fileStream.end();
+
+      fileStream.on('finish', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('update-download-ready', { filePath: updateFilePath });
+        }
+
+        // Aguarda 1.5s para o usuário visualizar o feedback de sucesso antes de iniciar o instalador
+        setTimeout(() => {
+          try {
+            const installer = spawn(updateFilePath, [], {
+              detached: true,
+              stdio: 'ignore'
+            });
+            installer.unref();
+
+            // Encerra o GamerVault para liberar arquivos e permitir a instalação limpa
+            app.quit();
+          } catch (execErr) {
+            console.error('Erro ao executar instalador:', execErr);
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('update-download-error', 'Falha ao iniciar o instalador: ' + execErr.message);
+            }
+          }
+        }, 1500);
+      });
+
+      fileStream.on('error', (fsErr) => {
+        console.error('Erro ao gravar arquivo temporário:', fsErr);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('update-download-error', fsErr.message);
+        }
+      });
+
+    } catch (err) {
+      console.error('Erro no fluxo de download da atualização:', err);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-download-error', err.message);
+      }
+    }
   });
 
   // Qualquer link externo clicado abre diretamente no navegador do sistema operacional (Chrome, Edge, etc.)

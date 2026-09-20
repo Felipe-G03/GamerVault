@@ -1,6 +1,6 @@
 {
   "name": "gamer-vault",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "type": "module",
   "description": "Seu depósito pessoal e social de jogos",
   "main": "electron/main.cjs",

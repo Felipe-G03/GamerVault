@@ -1,7 +1,7 @@
 import React from 'react';
-import { Minus, Square, X, Gamepad2 } from 'lucide-react';
+import { Minus, Square, X, Gamepad2, Rocket } from 'lucide-react';
 
-export default function TitleBar() {
+export default function TitleBar({ updateInfo, onOpenUpdateModal }) {
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron;
 
   const handleMinimize = () => {
@@ -35,6 +35,20 @@ export default function TitleBar() {
           <span className="text-gray-300">CORE ONLINE</span>
         </div>
       </div>
+
+      {/* Botão Central de Atualização Disponível */}
+      {updateInfo?.hasUpdate && (
+        <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' }}>
+          <button
+            onClick={onOpenUpdateModal}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 hover:text-cyan-300 font-mono text-[10px] font-bold tracking-wider transition-all shadow-[0_0_12px_rgba(6,182,212,0.25)] hover:shadow-[0_0_18px_rgba(6,182,212,0.45)] active:scale-95 group cursor-pointer"
+            title="Nova versão disponível! Clique para atualizar."
+          >
+            <Rocket className="w-3 h-3 text-cyan-400 group-hover:animate-bounce" />
+            <span className="tracking-wide">ATUALIZAÇÃO v{updateInfo.latestVersion} DISPONÍVEL</span>
+          </button>
+        </div>
+      )}
 
       {/* Controles da Janela do Electron */}
       {isElectron && (

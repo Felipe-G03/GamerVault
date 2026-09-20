@@ -9,11 +9,13 @@ import {
   Music,
   Image as ImageIcon,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { searchRawgGames, getRawgApiKey } from '../../config/rawg';
 import { parseScreenshotUrls } from '../../services/driveUtils';
 import { searchGameTheme } from '../../services/youtubeService';
+import RatingCalculator from './RatingCalculator';
 
 export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) {
   const [step, setStep] = useState(editingGame ? 2 : 1);
@@ -22,6 +24,7 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [isFetchingTheme, setIsFetchingTheme] = useState(false);
+  const [showRatingCalculator, setShowRatingCalculator] = useState(false);
 
   // Estado do formulário no Passo 2
   const [selectedGame, setSelectedGame] = useState(
@@ -130,11 +133,7 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    setSaveError(null);
-
     try {
-      const parsedScreenshots = parseScreenshotUrls(selectedGame.screenshotsText);
-
       const gamePayload = {
         title: selectedGame.title,
         status: selectedGame.status,
@@ -147,7 +146,7 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
         genre: selectedGame.genre || '',
         genre_slugs: selectedGame.genre_slugs || [],
         tags: selectedGame.tags || [],
-        screenshots: parsedScreenshots,
+        screenshots: editingGame?.screenshots || selectedGame?.screenshots || [],
         themeUrl: selectedGame.themeUrl ? selectedGame.themeUrl.trim() : null
       };
 
@@ -366,7 +365,7 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
               </div>
 
               {/* SUA NOTA (1-10) */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
                     SUA NOTA (1-10)
@@ -384,6 +383,38 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
                   onChange={(e) => setSelectedGame({ ...selectedGame, rating: parseFloat(e.target.value) })}
                   className="w-full h-2 bg-surface-high rounded-lg appearance-none cursor-pointer accent-accent-bright"
                 />
+
+                {/* Botão Chamativo: Não sabe que nota dar? */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowRatingCalculator(!showRatingCalculator)}
+                    className={`w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-mono font-semibold transition-all ${
+                      showRatingCalculator
+                        ? 'bg-cyan-950/40 border-cyan-500/60 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
+                        : 'bg-[#151722] hover:bg-[#1a1e2d] border-border hover:border-cyan-500/50 text-gray-300 hover:text-cyan-400'
+                    }`}
+                  >
+                    <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
+                    <span>
+                      {showRatingCalculator 
+                        ? 'Ocultar Calculadora de Nota' 
+                        : 'Não sabe que nota dar? Calcular nota sugerida por critérios'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Painel Expansível da Calculadora de Notas */}
+                {showRatingCalculator && (
+                  <div className="pt-1">
+                    <RatingCalculator
+                      currentRating={selectedGame.rating}
+                      onApplyRating={(newRating) => setSelectedGame((prev) => ({ ...prev, rating: newRating }))}
+                      onAppendReview={(text) => setSelectedGame((prev) => ({ ...prev, review: (prev.review ? prev.review.trim() + text : text.trim()) }))}
+                      onClose={() => setShowRatingCalculator(false)}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* SUA ANÁLISE */}
@@ -398,23 +429,6 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
                   onChange={(e) => setSelectedGame({ ...selectedGame, review: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 resize-y"
                 ></textarea>
-              </div>
-
-              {/* LINKS DAS SCREENSHOTS */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-mono uppercase text-gray-300 font-semibold">
-                  LINKS DAS SCREENSHOTS
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Cole um link por linha..."
-                  value={selectedGame.screenshotsText}
-                  onChange={(e) => setSelectedGame({ ...selectedGame, screenshotsText: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-xs text-white font-mono placeholder-gray-500 focus:outline-none focus:border-orange-500 resize-y"
-                ></textarea>
-                <span className="text-[11px] text-gray-400 block italic">
-                  Dica: Links do Google Drive são convertidos automaticamente.
-                </span>
               </div>
             </>
           ) : (

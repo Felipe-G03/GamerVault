@@ -3,6 +3,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './config/firebase';
 import { getUserGames, addGame, updateGame, deleteGame } from './services/gamesService';
 import { getProfile, ensureProfile } from './services/profileService';
+import { checkAppUpdate } from './services/updateService';
 
 import TitleBar from './components/layout/TitleBar';
 import Navbar from './components/layout/Navbar';
@@ -12,6 +13,7 @@ import GuildView from './components/guild/GuildView';
 import StatsView from './components/stats/StatsView';
 import ProfileView from './components/profile/ProfileView';
 import AuthModal from './components/auth/AuthModal';
+import UpdateModal from './components/common/UpdateModal';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -23,6 +25,10 @@ export default function App() {
 
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [loadingGames, setLoadingGames] = useState(false);
+
+  // Informações de atualização de versão do sistema
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
   // Monitora o estado de autenticação
   useEffect(() => {
@@ -52,6 +58,16 @@ export default function App() {
     }
 
     return () => unsubscribe();
+  }, []);
+
+  // Checa se há atualização disponível no Firestore ao iniciar
+  useEffect(() => {
+    const currentVer = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0';
+    checkAppUpdate(currentVer).then((info) => {
+      if (info?.hasUpdate) {
+        setUpdateInfo(info);
+      }
+    });
   }, []);
 
   // Carrega perfil e jogos
@@ -147,7 +163,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#07080c] text-white flex flex-col selection:bg-accent-bright selection:text-black">
       {/* Barra de Título Superior Nativa/Electron */}
-      <TitleBar />
+      <TitleBar 
+        updateInfo={updateInfo}
+        onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+      />
+
+      {/* Modal de Atualização de Versão */}
+      {isUpdateModalOpen && updateInfo && (
+        <UpdateModal
+          updateInfo={updateInfo}
+          onClose={() => setIsUpdateModalOpen(false)}
+        />
+      )}
 
       {/* Conteúdo Principal ou Modal de Login */}
       {!user ? (
