@@ -1,5 +1,6 @@
 import React from 'react';
 import { Minus, Square, X, Gamepad2, Rocket } from 'lucide-react';
+import ThemeSelector from './ThemeSelector';
 
 export default function TitleBar({ updateInfo, onOpenUpdateModal }) {
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron;
@@ -18,7 +19,7 @@ export default function TitleBar({ updateInfo, onOpenUpdateModal }) {
 
   return (
     <div
-      className="w-full h-9 bg-[#07080c] border-b border-border/70 flex items-center justify-between px-3 select-none z-50 text-xs font-mono"
+      className="w-full h-9 bg-background border-b border-border/70 flex items-center justify-between px-3 select-none z-50 text-xs font-mono"
       style={{ WebkitAppRegion: isElectron ? 'drag' : 'default' }}
     >
       {/* Branding & Status */}
@@ -50,35 +51,37 @@ export default function TitleBar({ updateInfo, onOpenUpdateModal }) {
         </div>
       )}
 
-      {/* Controles da Janela do Electron */}
-      {isElectron && (
-        <div
-          className="flex items-center gap-1 -mr-1"
-          style={{ WebkitAppRegion: 'no-drag' }}
-        >
-          <button
-            onClick={handleMinimize}
-            className="w-8 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-surface-high rounded transition-colors"
-            title="Minimizar"
-          >
-            <Minus className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={handleMaximize}
-            className="w-8 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-surface-high rounded transition-colors"
-            title="Maximizar"
-          >
-            <Square className="w-3 h-3" />
-          </button>
-          <button
-            onClick={handleClose}
-            className="w-8 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-600/90 rounded transition-colors"
-            title="Fechar"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      {/* Lado Direito: Seletor de Tema & Controles da Janela */}
+      <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' }}>
+        <ThemeSelector />
+
+        {/* Controles da Janela do Electron */}
+        {isElectron && (
+          <div className="flex items-center gap-1 -mr-1">
+            <button
+              onClick={handleMinimize}
+              className="w-8 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-surface-high rounded transition-colors"
+              title="Minimizar"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleMaximize}
+              className="w-8 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-surface-high rounded transition-colors"
+              title="Maximizar"
+            >
+              <Square className="w-3 h-3" />
+            </button>
+            <button
+              onClick={handleClose}
+              className="w-8 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-600/90 rounded transition-colors"
+              title="Fechar"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

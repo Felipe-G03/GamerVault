@@ -153,7 +153,7 @@ export default function App() {
 
   if (loadingAuth) {
     return (
-      <div className="min-h-screen bg-[#07080c] flex flex-col items-center justify-center text-accent-bright font-mono gap-3">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-accent-bright font-mono gap-3">
         <Loader2 className="w-10 h-10 animate-spin text-accent-bright" />
         <span className="text-sm tracking-widest uppercase">Iniciando Gamer's Vault...</span>
       </div>
@@ -161,7 +161,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#07080c] text-white flex flex-col selection:bg-accent-bright selection:text-black">
+    <div className="min-h-screen bg-background text-white flex flex-col selection:bg-accent-bright selection:text-black">
       {/* Barra de Título Superior Nativa/Electron */}
       <TitleBar 
         updateInfo={updateInfo}
