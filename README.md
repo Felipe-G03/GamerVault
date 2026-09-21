@@ -1,133 +1,145 @@
-# 🎮 Gamer's Vault
+# Gamer's Vault
 
-> **Seu depósito pessoal e social de jogos para Desktop.**
+> **Seu santuário pessoal e social de jogos para Desktop.**
 
-O **Gamer's Vault** é um aplicativo desktop moderno construído com **Electron**, **React**, **Vite** e **Tailwind CSS**, integrado ao **Firebase Firestore** e à **RAWG API**. Ele permite rastrear todos os seus jogos zerados e em progresso, avaliar com notas e reviews críticas, salvar memórias/screenshots, ouvir trilhas sonoras temáticas diretamente no app e acompanhar as conquistas dos seus amigos na Guilda.
-
----
-
-## ✨ Funcionalidades Principais
-
-- 🎵 **Trilha Sonora de Fundo (EA Trax)**:
-  - Sistema de música ambiente estilo FIFA / EA Trax com reprodução automática, shuffle aleatório inteligente e notificação deslizante de faixas.
-  - Pausa inteligente sincronizada quando o tema oficial de um jogo é reproduzido.
-
-- 🎬 **Abertura Cinemática & Splash de Vídeo**:
-  - Tela de splash com suporte a vídeo personalizado (`public/intro.mp4`) em fundo preto puro (#000000) e fallback para logo holográfica animada.
-  - Suporte a pular intro (`ESC`, `Espaço`, clique) com transição suave e início sincronizado da música.
-
-- 🎨 **Temas Visuais Gamer & Iluminação Atmosférica**:
-  - 5 paletas completas e vibrantes: *Cyber Emerald*, *Electric Cyan*, *Solar Amber*, *Synthwave Void* e *Blood Crimson*.
-  - Superfícies escuras ricas e bordas coloridas sem artefatos, com aura radial atmosférica no topo.
-
-- 🏛️ **Vault & Acervo Pessoal**:
-  - Cards visuais com capas em alta definição, tempo de jogo, data de conclusão e badges neon.
-  - Ordenação padrão por Data (mais recentes no topo), Nota, Tempo de Jogo, Título (A-Z) ou Metacritic.
-  - Modais montados com React Portal, fechamento por tecla ESC, clique fora do card e rolagem interna contida a 90vh.
-  - Filtros rápidos por Status (*Finalizado*, *Quero Jogar*, *Jogando*, *Abandonado*) e busca instantânea.
-
-- 🎬 **Visão Expandida Cinematográfica**:
-  - Banner imersivo, análise crítica completa, dados do Metacritic e tags oficiais da RAWG.
-  - Galeria de screenshots com lightbox (visualizador ampliado).
-  - **Conversor inteligente de links do Google Drive**: converte automaticamente URLs de compartilhamento do Drive para carregamento direto.
-
-- 🎵 **Player de Trilha Sonora Tema (In-App)**:
-  - Reproduza a música tema do jogo (via YouTube ou links de áudio direto) sem abrir janelas externas no navegador!
-  - Painel de áudio neon com botões Play/Pause, mudo, slider de volume e barras de equalizador animadas.
-
-- 🔍 **Adicionar Jogo em 2 Passos**:
-  - **Passo 1**: Busca instantânea no catálogo da RAWG API com prévias de capas, gêneros e notas Metacritic.
-  - **Passo 2**: Formulário detalhado com Status, Data de Conclusão, Horas de Jogo, Nota (1 a 10), Análise, Screenshots e Trilha Sonora.
-
-- 🛡️ **Guilda & Feed Social**:
-  - Feed em tempo real com as atividades recentes dos amigos adicionados (quem finalizou qual jogo, data e nota).
-  - **Inspecionar Vault do Amigo**: explore a coleção completa de qualquer amigo cadastrado em modo leitura!
-
-- 📊 **Estatísticas Gamer**:
-  - Painel com total de horas jogadas, quantidade de jogos zerados vs backlog, nota média pessoal, título favorito e ranking de gêneros mais jogados.
-
-- 👤 **Perfil & Gerenciamento de Amigos**:
-  - Definição de Nickname personalizado.
-  - Seu **ID de Piloto** único com botão de cópia rápida.
-  - Adição e remoção de amigos por ID.
+[![React](https://img.shields.io/badge/React-18.3-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![Electron](https://img.shields.io/badge/Electron-34.2-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-6.1-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore_%26_Auth-FFCA28?style=flat-square&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![RAWG API](https://img.shields.io/badge/RAWG_API-Games_Database-black?style=flat-square)](https://rawg.io/apidocs)
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## Sobre o Projeto
 
-- **Desktop**: [Electron](https://www.electronjs.org/) (Janela customizada com Titlebar Gamer)
-- **Frontend**: [React 18](https://react.dev/) + [Vite](https://vitejs.dev/)
-- **Estilização**: [Tailwind CSS](https://tailwindcss.com/) (Tema Gamer Dark Neon)
-- **Ícones**: [Lucide React](https://lucide.dev/)
-- **Banco de Dados & Auth**: [Firebase Firestore & Firebase Authentication](https://firebase.google.com/)
-- **Catálogo de Jogos**: [RAWG Video Games Database API](https://rawg.io/apidocs)
+Na era das bibliotecas digitais repletas de promoções na Steam, Game Pass, PlayStation e Epic Games, muitos jogadores enfrentam a famosa "paralisia de escolha" e o acúmulo de backlogs infinitos. Com frequência, zeramos títulos marcantes, mas a experiência se perde na rotina sem um registro especial.
+
+O **Gamer's Vault** nasceu para resgatar o valor de cada jornada gamer. Mais do que um simples catálogo, ele funciona como uma **sala de troféus e diário interativo**, onde cada jogo finalizado é imortalizado com seu tempo dedicado, nota crítica, análise detalhada, capturas de tela e até sua trilha sonora oficial.
+
+### O Fator Social e Incentivo Mútuo
+Jogar e vencer desafios fica muito mais empolgante quando compartilhado. O Gamer's Vault conta com o sistema de **Guilda**, permitindo que você adicione seus amigos por ID de Piloto. Pelo feed social e pela inspeção de perfis, você acompanha em tempo real o que seus amigos estão jogando e finalizando, gerando um incentivo saudável para retomar aquele jogo parado na estante, trocar recomendações genuínas e celebrar conquistas em conjunto.
 
 ---
 
-## 🚀 Como Executar o Projeto
+## Principais Recursos
 
-### 1. Pré-requisitos
-- [Node.js](https://nodejs.org/) versão 18 ou superior.
+### 1. Cofre Pessoal e Flexibilidade de Visualização
+* **Coleções por Ano:** Agrupamento automático dos jogos pela data em que foram finalizados (ex: Coleção 2026, 2025, 2024), com métricas individuais de horas totais e média de notas daquele período.
+* **Rankings Globais Unificados:** Ordene todo o seu acervo de ponta a ponta por **Tempo de Jogo** (descubra seus jogos mais jogados da vida), **Nota Pessoal**, **Metacritic** ou **Título (A-Z)**.
+* **Lista de Desejos e Backlog:** Filtros rápidos entre jogos *Finalizados*, *Quero Jogar* e visualização geral da biblioteca.
 
-### 2. Clonar e Instalar Dependências
-```bash
-git clone https://github.com/SEU_USUARIO/gamervault.git
-cd gamervault
-npm install
-```
+### 2. Trilha Sonora de Fundo & Player de Tema dos Jogos
+* **Ambiente Estilo EA Trax:** Player de música embutido com playlist embaralhada automaticamente (shuffle inteligente), transições suaves e notificação deslizante no canto da tela informando a faixa e artista.
+* **Player In-App de Temas de Jogos:** Ao abrir os detalhes de um jogo, você pode reproduzir a música tema oficial (via links do YouTube ou arquivos de áudio) com equalizador animado, pausando a música ambiente automaticamente sem necessidade de abrir abas externas no navegador.
+* **Controle de Som Fluído:** Ajuste de volume e mute diretamente na barra superior, projetado com tolerância e sem engasgos de cursor.
 
-### 3. Configurar Credenciais (Firebase & RAWG)
-Você pode criar um arquivo `.env` na raiz do projeto baseado no `.env.example`:
+### 3. Descoberta de Jogos (Aba Descobrir)
+* Integração direta com a base de dados da **RAWG API** (mais de 500.000 jogos).
+* Carrossel de destaques e filtros por categorias curadas: *Ação & RPG*, *Mundo Aberto*, *Indies*, *Melhores Avaliados* e lançamentos recentes.
+* Paginação numérica instantânea e indicador visual inteligente para jogos que você já possui cadastrados no seu cofre.
+
+### 4. Guilda e Feed Social
+* **Feed de Atividades:** Acompanhe os jogos que seus amigos zeraram recentemente com notas, horas e datas.
+* **Inspecionar Vault do Amigo:** Clique no perfil de qualquer amigo da guilda para abrir a biblioteca dele em modo leitura, com acesso a notas, análises e tempo de jogo.
+* **Ranking de Membros:** Estatísticas combinadas da guilda, exibindo os maiores exploradores e recordistas de horas.
+
+### 5. Estatísticas & Métricas Pessoais
+* Painel analítico consolidando total de horas registradas, taxa de conclusão de backlog, nota média geral, título favorito e gráfico de distribuição de gêneros mais jogados.
+
+### 6. Personalização & Abertura Cinemática
+* **5 Paletas Visuais Gamer:** Alterne instantaneamente entre os temas *Cyber Emerald*, *Electric Cyan*, *Solar Amber*, *Synthwave Void* e *Blood Crimson*.
+* **Intro em Vídeo:** Suporte a vídeo de abertura cinemático (`public/intro.mp4`) com fallback para logo holográfica e possibilidade de pular a qualquer momento (`ESC`, `Espaço` ou clique).
+
+---
+
+## Configuração das APIs e Serviços
+
+O Gamer's Vault utiliza o **Firebase** para autenticação e sincronização de dados em nuvem, e a **RAWG API** para busca e enriquecimento de capas e metadados.
+
+### 1. Configurando o Firebase (Gratuito)
+1. Acesse o [Firebase Console](https://console.firebase.google.com/) e crie um novo projeto.
+2. No menu lateral, acesse **Authentication** > **Sign-in method** e ative o provedor **Email/Senha**.
+3. Em **Firestore Database**, clique em **Criar banco de dados** (inicie em modo de teste ou configure as regras de leitura e escrita para usuários autenticados).
+4. Acesse as **Configurações do Projeto** (ícone de engrenagem) e, na seção *Seus aplicativos*, crie um aplicativo Web (`</>`) para obter as credenciais do SDK.
+
+### 2. Obtendo a Chave da RAWG API (Gratuito)
+1. Crie uma conta gratuita no [RAWG.io](https://rawg.io/).
+2. Acesse a página de [RAWG API Docs](https://rawg.io/apidocs) e solicite uma **API Key** de desenvolvedor.
+
+### 3. Inserindo as Credenciais no Projeto
+
+Você pode configurar as credenciais de duas maneiras:
+
+#### Opção A: Via Arquivo `.env` (Recomendado para Desenvolvimento)
+Crie um arquivo `.env` na raiz do projeto preenchendo as variáveis conforme o `.env.example`:
 
 ```env
-# Firebase Firestore & Auth
-VITE_FIREBASE_API_KEY=sua_firebase_api_key
+# Firebase Firestore & Authentication
+VITE_FIREBASE_API_KEY=sua_api_key_aqui
 VITE_FIREBASE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=seu_project_id
+VITE_FIREBASE_PROJECT_ID=seu_projeto_id
 VITE_FIREBASE_STORAGE_BUCKET=seu_projeto.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=seu_sender_id
 VITE_FIREBASE_APP_ID=seu_app_id
 
-# RAWG API Key (Obtenha gratuitamente em https://rawg.io/apidocs)
-VITE_RAWG_API_KEY=sua_rawg_api_key
+# RAWG API Key
+VITE_RAWG_API_KEY=sua_chave_rawg_aqui
 ```
 
-> 💡 **Dica**: Caso prefira, você também pode inserir suas chaves diretamente dentro do aplicativo clicando no ícone de engrenagem ⚙️ (Configurações) na tela inicial.
+#### Opção B: Diretamente pela Interface do App
+Se você já estiver executando o aplicativo ou utilizando o `.exe` compilado, clique no ícone de engrenagem (**Configurações**) na barra superior e cole suas chaves nos campos correspondentes. Elas serão salvas localmente no cliente com segurança.
 
 ---
 
-## 💻 Scripts Disponíveis
+## Como Executar Localmente
 
-| Comando | Descrição |
-|---|---|
-| `npm run dev` | Inicia o servidor de desenvolvimento web (Vite) em `http://localhost:5173` |
-| `npm run build` | Compila o bundle de produção do React/Vite |
-| `npm run electron:dev` | Inicia o Vite e abre a janela do aplicativo desktop Electron com Hot-Reload |
-| `npm run electron:build` | Gera o executável/instalador `.exe` para Windows na pasta `dist-electron` |
+### Pré-requisitos
+* [Node.js](https://nodejs.org/) (versão 18.x ou superior recomendada)
+* Gerenciador de pacotes `npm`
+
+### Instalação
+```bash
+# 1. Clone o repositório
+git clone https://github.com/Felipe-G03/GamerVault.git
+cd GamerVault
+
+# 2. Instale as dependências
+npm install
+
+# 3. Inicie o ambiente de desenvolvimento web (Vite)
+npm run dev
+
+# Ou inicie diretamente na janela do Electron com Hot-Reload
+npm run electron:dev
+```
+
+### Gerando o Executável Desktop (`.exe`)
+Para empacotar o Gamer's Vault como um instalador nativo do Windows:
+```bash
+npm run electron:build
+```
+Os arquivos gerados estarão disponíveis no diretório `dist-electron/`:
+* `Gamer's Vault Setup X.X.X.exe` (Instalador NSIS autônomo)
+* `win-unpacked/` (Executável descompactado pronto para uso)
 
 ---
 
-## 📁 Estrutura do Firestore
+## Músicas de Fundo Personalizadas
 
-O projeto mantém total compatibilidade com a estrutura existente:
+Para personalizar a trilha sonora ambiente do seu Gamer's Vault:
+1. Adicione seus arquivos no formato `.mp3` dentro da pasta `public/bgm/`.
+2. Configure os títulos e artistas no arquivo `src/config/bgmPlaylist.js`.
 
-- `/profiles/{userId}`:
-  - `email`: string
-  - `nickname`: string
-  - `friends`: string[] (IDs de Piloto)
+---
 
-- `/users/{userId}/games/{gameId}`:
-  - `title`: string
-  - `status`: string ("Finalizado", "Quero Jogar", "Jogando", "Abandonado")
-  - `rating`: number (1 a 10)
-  - `playtime`: string (horas jogadas)
-  - `dateFinished`: string ("YYYY-MM-DD")
-  - `review`: string
-  - `imageUrl`: string (URL da imagem RAWG)
-  - `metacritic`: number
-  - `genre`: string
-  - `genre_slugs`: string[]
-  - `tags`: string[]
-  - `screenshots`: string[]
-  - `themeUrl`: string | null
-  - `createdAt`: Timestamp
+## Estrutura de Dados no Firestore
+
+* `/profiles/{userId}`: Perfil do jogador (nickname, email, lista de amigos por ID).
+* `/users/{userId}/games/{gameId}`: Dados dos jogos salvos (título, horas jogadas, nota, análise crítica, screenshots, data de conclusão, metacritic, tema musical).
+
+---
+
+## Licença
+
+Distribuído sob a licença **MIT**. Consulte o arquivo `LICENSE` para mais detalhes.
