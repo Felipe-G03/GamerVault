@@ -41,6 +41,7 @@ export default function BgmPlayer() {
   const audioRef = useRef(null);
   const wasPlayingBeforeModal = useRef(false);
   const toastTimeoutRef = useRef(null);
+  const volumeHoverTimeoutRef = useRef(null);
   const userManuallyPausedRef = useRef(false);
   const hasStartedRef = useRef(false);
 
@@ -215,6 +216,33 @@ export default function BgmPlayer() {
     localStorage.setItem('gamervault_bgm_muted', String(nextMuted));
   };
 
+  // Handlers para hover suave do slider de volume com tolerância (debounce)
+  const handleVolumeMouseEnter = () => {
+    if (volumeHoverTimeoutRef.current) {
+      clearTimeout(volumeHoverTimeoutRef.current);
+      volumeHoverTimeoutRef.current = null;
+    }
+    setShowVolumeSlider(true);
+  };
+
+  const handleVolumeMouseLeave = () => {
+    if (volumeHoverTimeoutRef.current) {
+      clearTimeout(volumeHoverTimeoutRef.current);
+    }
+    volumeHoverTimeoutRef.current = setTimeout(() => {
+      setShowVolumeSlider(false);
+    }, 350);
+  };
+
+  // Limpa timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (volumeHoverTimeoutRef.current) {
+        clearTimeout(volumeHoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Escuta os eventos globais disparados quando o modal de tema do YouTube abre/fecha
   useEffect(() => {
     const handlePauseFromModal = () => {
@@ -297,8 +325,8 @@ export default function BgmPlayer() {
         {/* Botão Mudo / Slider de Volume */}
         <div
           className="relative flex items-center"
-          onMouseEnter={() => setShowVolumeSlider(true)}
-          onMouseLeave={() => setShowVolumeSlider(false)}
+          onMouseEnter={handleVolumeMouseEnter}
+          onMouseLeave={handleVolumeMouseLeave}
         >
           <button
             onClick={toggleMute}
@@ -312,22 +340,28 @@ export default function BgmPlayer() {
             )}
           </button>
 
-          {/* Slider flutuante de volume no hover */}
+          {/* Slider flutuante de volume no hover (com ponte invisível de padding para não sumir ao descer o cursor) */}
           {showVolumeSlider && (
-            <div className="absolute top-full right-0 mt-1 p-2 rounded-lg bg-surface-container border border-border shadow-xl z-50 flex items-center gap-2">
-              <input
-                type="range"
-                min="0"
-                max="0.6"
-                step="0.02"
-                value={isMuted ? 0 : volume}
-                onChange={handleVolumeChange}
-                className="w-20 h-1 accent-accent-bright bg-surface-high rounded-lg cursor-pointer"
-                title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100 / 0.6)}%`}
-              />
-              <span className="font-mono text-[10px] text-gray-400 w-6 text-right">
-                {Math.round((isMuted ? 0 : volume) * 100 / 0.6)}%
-              </span>
+            <div
+              className="absolute top-full right-0 pt-2 z-50 animate-in fade-in duration-150"
+              onMouseEnter={handleVolumeMouseEnter}
+              onMouseLeave={handleVolumeMouseLeave}
+            >
+              <div className="p-2 rounded-lg bg-[#12151f] border border-border/90 shadow-2xl flex items-center gap-2 backdrop-blur-xl">
+                <input
+                  type="range"
+                  min="0"
+                  max="0.6"
+                  step="0.02"
+                  value={isMuted ? 0 : volume}
+                  onChange={handleVolumeChange}
+                  className="w-24 h-1.5 accent-accent-bright bg-surface-high rounded-lg cursor-pointer"
+                  title={`Volume: ${Math.round(((isMuted ? 0 : volume) * 100) / 0.6)}%`}
+                />
+                <span className="font-mono text-[10px] text-gray-300 w-7 text-right">
+                  {Math.round(((isMuted ? 0 : volume) * 100) / 0.6)}%
+                </span>
+              </div>
             </div>
           )}
         </div>

@@ -102,7 +102,7 @@ export default function GameCard({ game, onClick }) {
             <div className="flex items-center gap-1 text-amber-500" title="Tempo de jogo">
               <Clock className="w-3.5 h-3.5" />
               <span className="text-gray-300 font-mono text-[11px]">
-                {game.playtime ? `${game.playtime}h` : '0h'}
+                {game.playtime ? `${String(game.playtime).replace(/h$/i, '').trim()}h` : '0h'}
               </span>
             </div>
 

@@ -77,8 +77,69 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
     });
   }, [games, statusFilter, searchTerm]);
 
-  // Agrupa os jogos por ano/coleção e calcula métricas
+  // Helpers robustos de conversão para ordenação e métricas
+  const parsePlaytimeNumber = (val) => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const cleanStr = String(val).trim().replace(',', '.').replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleanStr);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const parseNumberValue = (val) => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const cleanStr = String(val).trim().replace(',', '.').replace(/[^0-9.-]/g, '');
+    const num = parseFloat(cleanStr);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const parseGameDate = (g) => {
+    if (g.dateFinished) {
+      const d = new Date(g.dateFinished).getTime();
+      if (!isNaN(d)) return d;
+    }
+    if (g.createdAt?.toDate) {
+      return g.createdAt.toDate().getTime();
+    }
+    if (g.createdAt?.seconds) {
+      return g.createdAt.seconds * 1000;
+    }
+    return 0;
+  };
+
+  // Comparador unificado para jogos
+  const compareGames = (a, b) => {
+    let valueA, valueB;
+
+    if (sortBy === 'playtime') {
+      valueA = parsePlaytimeNumber(a.playtime);
+      valueB = parsePlaytimeNumber(b.playtime);
+    } else if (sortBy === 'rating' || sortBy === 'metacritic') {
+      valueA = parseNumberValue(a[sortBy]);
+      valueB = parseNumberValue(b[sortBy]);
+    } else if (sortBy === 'dateFinished') {
+      valueA = parseGameDate(a);
+      valueB = parseGameDate(b);
+    } else if (sortBy === 'title') {
+      valueA = (a.title || '').trim().toLowerCase();
+      valueB = (b.title || '').trim().toLowerCase();
+    } else {
+      valueA = a[sortBy] || '';
+      valueB = b[sortBy] || '';
+    }
+
+    if (sortOrder === 'desc') {
+      return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+    } else {
+      return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+    }
+  };
+
+  // Agrupa os jogos por ano/coleção apenas quando a ordenação for por Data de Conclusão
   const yearGroups = useMemo(() => {
+    if (sortBy !== 'dateFinished') return [];
+
     const groups = {};
 
     filteredGames.forEach(game => {
@@ -94,10 +155,10 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
       }
       groups[category].games.push(game);
 
-      const hours = parseFloat(game.playtime) || 0;
+      const hours = parsePlaytimeNumber(game.playtime);
       groups[category].totalHours += hours;
 
-      const score = parseFloat(game.rating) || 0;
+      const score = parseNumberValue(game.rating);
       if (score > 0) {
         groups[category].totalScore += score;
         groups[category].ratedCount += 1;
@@ -106,51 +167,48 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
 
     // Ordena os jogos dentro de cada grupo
     Object.values(groups).forEach(grp => {
-      grp.games.sort((a, b) => {
-        let valueA = a[sortBy];
-        let valueB = b[sortBy];
-
-        if (sortBy === 'rating' || sortBy === 'playtime' || sortBy === 'metacritic') {
-          valueA = Number(valueA) || 0;
-          valueB = Number(valueB) || 0;
-        } else if (sortBy === 'dateFinished') {
-          const parseGameDate = (g) => {
-            if (g.dateFinished) {
-              const d = new Date(g.dateFinished).getTime();
-              if (!isNaN(d)) return d;
-            }
-            if (g.createdAt?.toDate) {
-              return g.createdAt.toDate().getTime();
-            }
-            if (g.createdAt?.seconds) {
-              return g.createdAt.seconds * 1000;
-            }
-            return 0;
-          };
-          valueA = parseGameDate(a);
-          valueB = parseGameDate(b);
-        } else if (sortBy === 'title') {
-          valueA = (valueA || '').toLowerCase();
-          valueB = (valueB || '').toLowerCase();
-        }
-
-        if (sortOrder === 'desc') {
-          return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
-        } else {
-          return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
-        }
-      });
+      grp.totalHours = Math.round(grp.totalHours * 10) / 10;
+      grp.games.sort(compareGames);
     });
 
-    // Ordenação dos cabeçalhos: Lista de Desejos (se houver), depois anos decrescentes (2026, 2025...), depois outros
+    // Ordenação dos cabeçalhos
     return Object.values(groups).sort((a, b) => {
       if (a.category === 'Lista de Desejos') return -1;
       if (b.category === 'Lista de Desejos') return 1;
       if (a.category === 'Sem Ano Definido') return 1;
       if (b.category === 'Sem Ano Definido') return -1;
-      return b.category.localeCompare(a.category);
+      return sortOrder === 'desc'
+        ? b.category.localeCompare(a.category)
+        : a.category.localeCompare(b.category);
     });
   }, [filteredGames, sortBy, sortOrder]);
+
+  // Lista unificada ordenada globalmente (usada para Tempo de Jogo, Nota, Título, Metacritic)
+  const sortedUnifiedGames = useMemo(() => {
+    if (sortBy === 'dateFinished') return [];
+    return [...filteredGames].sort(compareGames);
+  }, [filteredGames, sortBy, sortOrder]);
+
+  // Métricas gerais para exibição no cabeçalho unificado
+  const globalStats = useMemo(() => {
+    let totalHours = 0;
+    let totalScore = 0;
+    let ratedCount = 0;
+
+    filteredGames.forEach(g => {
+      totalHours += parsePlaytimeNumber(g.playtime);
+      const score = parseNumberValue(g.rating);
+      if (score > 0) {
+        totalScore += score;
+        ratedCount++;
+      }
+    });
+
+    return {
+      totalHours: Math.round(totalHours * 10) / 10,
+      avgRating: ratedCount > 0 ? (totalScore / ratedCount).toFixed(1) : '-'
+    };
+  }, [filteredGames]);
 
   const toggleSortOrder = () => {
     setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
@@ -243,88 +301,143 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
         </div>
       </div>
 
-      {/* Exibição em Coleções Separadas por Ano / Desejos */}
-      {yearGroups.length > 0 ? (
-        <div className="space-y-8">
-          {yearGroups.map(grp => {
-            const isCollapsed = collapsedYears[grp.category];
-            const avgRating = grp.ratedCount > 0 ? (grp.totalScore / grp.ratedCount).toFixed(1) : '-';
-            const isWishlistGroup = grp.category === 'Lista de Desejos';
+      {/* Exibição em Coleções Separadas por Ano / Desejos (quando ordenar por Data) ou Lista Unificada */}
+      {filteredGames.length > 0 ? (
+        sortBy === 'dateFinished' ? (
+          <div className="space-y-8">
+            {yearGroups.map(grp => {
+              const isCollapsed = collapsedYears[grp.category];
+              const avgRating = grp.ratedCount > 0 ? (grp.totalScore / grp.ratedCount).toFixed(1) : '-';
+              const isWishlistGroup = grp.category === 'Lista de Desejos';
 
-            return (
-              <section key={grp.category} className="space-y-4">
-                {/* Header da Coleção */}
-                <div
-                  onClick={() => toggleYearCollapse(grp.category)}
-                  className={`flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r border cursor-pointer select-none transition-all shadow-sm group ${
-                    isWishlistGroup
-                      ? 'from-[#141b22] via-[#0f141a] to-transparent border-cyan-700/60 hover:border-cyan-400'
-                      : 'from-[#141622] via-[#0f111a] to-transparent border-border/90 hover:border-accent/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-2 h-7 rounded-full shadow-md ${
-                        isWishlistGroup
-                          ? 'bg-cyan-400 shadow-[0_0_10px_#06b6d4]'
-                          : 'bg-accent-bright shadow-[0_0_10px_#3dd69b]'
-                      }`}
-                    ></div>
-                    <div>
-                      <h2 className="text-lg sm:text-xl font-gamer font-bold text-white tracking-wider flex items-center gap-2">
-                        {isWishlistGroup ? (
-                          <span className="flex items-center gap-1.5 text-cyan-300">
-                            <Bookmark className="w-4 h-4 fill-current" />
-                            Lista de Desejos (Quero Jogar)
+              return (
+                <section key={grp.category} className="space-y-4">
+                  {/* Header da Coleção */}
+                  <div
+                    onClick={() => toggleYearCollapse(grp.category)}
+                    className={`flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r border cursor-pointer select-none transition-all shadow-sm group ${
+                      isWishlistGroup
+                        ? 'from-[#141b22] via-[#0f141a] to-transparent border-cyan-700/60 hover:border-cyan-400'
+                        : 'from-[#141622] via-[#0f111a] to-transparent border-border/90 hover:border-accent/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-2 h-7 rounded-full shadow-md ${
+                          isWishlistGroup
+                            ? 'bg-cyan-400 shadow-[0_0_10px_#06b6d4]'
+                            : 'bg-accent-bright shadow-[0_0_10px_#3dd69b]'
+                        }`}
+                      ></div>
+                      <div>
+                        <h2 className="text-lg sm:text-xl font-gamer font-bold text-white tracking-wider flex items-center gap-2">
+                          {isWishlistGroup ? (
+                            <span className="flex items-center gap-1.5 text-cyan-300">
+                              <Bookmark className="w-4 h-4 fill-current" />
+                              Lista de Desejos (Quero Jogar)
+                            </span>
+                          ) : grp.category !== 'Sem Ano Definido' ? (
+                            <span>Coleção {grp.category}</span>
+                          ) : (
+                            <span>Outros / Sem Data</span>
+                          )}
+                          <span className="text-xs font-mono font-normal text-gray-400 bg-surface px-2 py-0.5 rounded border border-border">
+                            {grp.games.length} {grp.games.length === 1 ? 'jogo' : 'jogos'}
                           </span>
-                        ) : grp.category !== 'Sem Ano Definido' ? (
-                          <span>Coleção {grp.category}</span>
-                        ) : (
-                          <span>Outros / Sem Data</span>
-                        )}
-                        <span className="text-xs font-mono font-normal text-gray-400 bg-surface px-2 py-0.5 rounded border border-border">
-                          {grp.games.length} {grp.games.length === 1 ? 'jogo' : 'jogos'}
+                        </h2>
+                      </div>
+                    </div>
+
+                    {/* Resumo Métricas do Grupo & Botão Recolher */}
+                    <div className="flex items-center gap-4 text-xs font-mono text-gray-400">
+                      {!isWishlistGroup && grp.totalHours > 0 && (
+                        <span className="hidden sm:inline-flex items-center gap-1 text-amber-400">
+                          <Clock className="w-3.5 h-3.5" />
+                          {grp.totalHours}h
                         </span>
-                      </h2>
+                      )}
+                      {!isWishlistGroup && avgRating !== '-' && (
+                        <span className="hidden sm:inline-flex items-center gap-1 text-emerald-400">
+                          <Star className="w-3.5 h-3.5 fill-current" />
+                          {avgRating} média
+                        </span>
+                      )}
+                      <button className="p-1 rounded hover:bg-surface text-gray-400 group-hover:text-white transition-colors">
+                        {isCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+                      </button>
                     </div>
                   </div>
 
-                  {/* Resumo Métricas do Grupo & Botão Recolher */}
-                  <div className="flex items-center gap-4 text-xs font-mono text-gray-400">
-                    {!isWishlistGroup && grp.totalHours > 0 && (
-                      <span className="hidden sm:inline-flex items-center gap-1 text-amber-400">
-                        <Clock className="w-3.5 h-3.5" />
-                        {grp.totalHours}h
-                      </span>
-                    )}
-                    {!isWishlistGroup && avgRating !== '-' && (
-                      <span className="hidden sm:inline-flex items-center gap-1 text-emerald-400">
-                        <Star className="w-3.5 h-3.5 fill-current" />
-                        {avgRating} média
-                      </span>
-                    )}
-                    <button className="p-1 rounded hover:bg-surface text-gray-400 group-hover:text-white transition-colors">
-                      {isCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-                    </button>
-                  </div>
+                  {/* Grid de Cards do Grupo */}
+                  {!isCollapsed && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 animate-in fade-in duration-200">
+                      {grp.games.map(game => (
+                        <GameCard
+                          key={game.id}
+                          game={game}
+                          onClick={game => setSelectedGame(game)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <section className="space-y-4">
+            {/* Header Unificado com Ordenação Global */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-[#141622] via-[#0f111a] to-transparent border border-border/90 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-7 rounded-full bg-accent-bright shadow-[0_0_10px_#3dd69b]"></div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-gamer font-bold text-white tracking-wider flex items-center gap-2 flex-wrap">
+                    <span>
+                      {statusFilter === 'Finalizado'
+                        ? 'Jogos Finalizados'
+                        : statusFilter === 'Desejo'
+                          ? 'Lista de Desejos'
+                          : 'Todos os Jogos'}
+                    </span>
+                    <span className="text-xs font-mono font-normal text-gray-400 bg-surface px-2 py-0.5 rounded border border-border">
+                      {sortedUnifiedGames.length} {sortedUnifiedGames.length === 1 ? 'jogo' : 'jogos'}
+                    </span>
+                    <span className="text-xs font-mono text-cyan-400 bg-cyan-950/50 border border-cyan-800/60 px-2 py-0.5 rounded">
+                      Ordenado por: {getSortLabel()} ({sortOrder === 'desc' ? 'Maior p/ Menor' : 'Menor p/ Maior'})
+                    </span>
+                  </h2>
                 </div>
+              </div>
 
-                {/* Grid de Cards do Grupo */}
-                {!isCollapsed && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 animate-in fade-in duration-200">
-                    {grp.games.map(game => (
-                      <GameCard
-                        key={game.id}
-                        game={game}
-                        onClick={game => setSelectedGame(game)}
-                      />
-                    ))}
-                  </div>
+              {/* Resumo Métricas */}
+              <div className="flex items-center gap-4 text-xs font-mono text-gray-400">
+                {globalStats.totalHours > 0 && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-amber-400">
+                    <Clock className="w-3.5 h-3.5" />
+                    {globalStats.totalHours}h no total
+                  </span>
                 )}
-              </section>
-            );
-          })}
-        </div>
+                {globalStats.avgRating !== '-' && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-emerald-400">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    {globalStats.avgRating} média
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Grid de Cards Unificado */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 animate-in fade-in duration-200">
+              {sortedUnifiedGames.map(game => (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  onClick={game => setSelectedGame(game)}
+                />
+              ))}
+            </div>
+          </section>
+        )
       ) : (
         /* Estado Vazio */
         <div className="py-16 text-center rounded-2xl bg-surface-container/40 border border-dashed border-border/80 p-8 space-y-4">
