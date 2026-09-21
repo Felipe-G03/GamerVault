@@ -15,9 +15,11 @@ import ProfileView from './components/profile/ProfileView';
 import DiscoverView from './components/discover/DiscoverView';
 import AuthModal from './components/auth/AuthModal';
 import UpdateModal from './components/common/UpdateModal';
+import StartupSplash from './components/common/StartupSplash';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
+  const [splashFinished, setSplashFinished] = useState(false);
   const [activeTab, setActiveTab] = useState('vault');
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -184,17 +186,21 @@ export default function App() {
     setActiveTab('adicionar');
   };
 
-  if (loadingAuth) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-accent-bright font-mono gap-3">
-        <Loader2 className="w-10 h-10 animate-spin text-accent-bright" />
-        <span className="text-sm tracking-widest uppercase">Iniciando Gamer's Vault...</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-background text-white flex flex-col selection:bg-accent-bright selection:text-black">
+    <div className="min-h-screen bg-background text-white flex flex-col selection:bg-accent-bright selection:text-black relative overflow-x-hidden">
+      {/* Vídeo de Introdução / Splash Screen em Tela Cheia */}
+      {!splashFinished && (
+        <StartupSplash onFinish={() => setSplashFinished(true)} />
+      )}
+
+      {/* Brilho Atmosférico Superior do Tema */}
+      <div 
+        className="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[360px] pointer-events-none opacity-25 blur-[120px] transition-all duration-700 -z-0"
+        style={{
+          background: 'radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%)'
+        }}
+      />
+
       {/* Barra de Título Superior Nativa/Electron */}
       <TitleBar 
         updateInfo={updateInfo}
@@ -210,7 +216,12 @@ export default function App() {
       )}
 
       {/* Conteúdo Principal ou Modal de Login */}
-      {!user ? (
+      {loadingAuth ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-accent-bright font-mono gap-3 min-h-[60vh]">
+          <Loader2 className="w-10 h-10 animate-spin text-accent-bright" />
+          <span className="text-sm tracking-widest uppercase">Iniciando Gamer's Vault...</span>
+        </div>
+      ) : !user ? (
         <AuthModal
           onAuthSuccess={handleAuthSuccess}
         />
@@ -235,7 +246,7 @@ export default function App() {
                 <span className="text-xs font-mono">Carregando acervo do Vault...</span>
               </div>
             ) : (
-              <>
+              <div key={activeTab} className="animate-page-enter w-full">
                 {activeTab === 'vault' && (
                   <VaultView
                     games={games}
@@ -290,7 +301,7 @@ export default function App() {
                     onProfileUpdated={() => loadUserProfile(user.uid, user.email)}
                   />
                 )}
-              </>
+              </div>
             )}
           </main>
         </>

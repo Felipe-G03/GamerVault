@@ -25,6 +25,14 @@ export default function YouTubeThemePlayer({ themeUrl, gameTitle }) {
   const [showVideo, setShowVideo] = useState(false);
   const audioRef = useRef(null);
 
+  // Pausa automaticamente a música de fundo (BGM) do Gamer's Vault enquanto a música tema estiver aberta
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('gamervault:pause-bgm'));
+    return () => {
+      window.dispatchEvent(new CustomEvent('gamervault:resume-bgm'));
+    };
+  }, []);
+
   if (!themeUrl) return null;
 
   const youtubeId = extractYouTubeId(themeUrl);

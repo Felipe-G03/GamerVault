@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Clock,
@@ -20,6 +21,30 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
   const [dominantColor, setDominantColor] = useState('61, 214, 155'); // Padrão verde neon
   const [activeThemeUrl, setActiveThemeUrl] = useState(game?.themeUrl || null);
 
+  // Travar o scroll do body da página enquanto o modal estiver visível
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  // Tecla ESC para fechar o modal ou fechar screenshot expandida
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (selectedScreenshot) {
+          setSelectedScreenshot(null);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedScreenshot, onClose]);
+
   // Busca automática da trilha sonora tema caso o jogo não possua link gravado
   useEffect(() => {
     setActiveThemeUrl(game?.themeUrl || null);
@@ -37,6 +62,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
   }, [game?.id, game?.themeUrl, game?.title]);
 
   if (!game) return null;
+  if (typeof document === 'undefined') return null;
 
   const screenshotsList = parseScreenshotUrls(game.screenshots);
 
@@ -58,13 +84,13 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
         const data = ctx.getImageData(0, 0, 30, 30).data;
 
         let r = 0, g = 0, b = 0, count = 0;
-        for (let i = 0; i < data.length; i += 16) {
+        for (let i = 0; i < data.length; i += 4) {
           const cr = data[i];
           const cg = data[i + 1];
           const cb = data[i + 2];
-          // Evita pixels quase pretos ou brancos puros para capturar cores vibrantes
-          const brightness = (cr * 299 + cg * 587 + cb * 114) / 1000;
-          if (brightness > 30 && brightness < 225) {
+          // Ignora pixels excessivamente escuros ou excessivamente brancos
+          const brightness = (cr + cg + cb) / 3;
+          if (brightness > 35 && brightness < 225) {
             r += cr;
             g += cg;
             b += cb;
@@ -91,14 +117,22 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
     return 'bg-gray-700 text-gray-300';
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl overflow-y-auto">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl overflow-y-auto"
+      onClick={(e) => {
+        // Fechar ao clicar no backdrop escuro fora do card
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       {/* Halo de Brilho & Vidro com a cor predominante do jogo */}
       <div
-        className="fixed inset-0 pointer-events-none transition-all duration-700 opacity-35 blur-[120px] scale-105"
+        className="fixed inset-0 pointer-events-none transition-all duration-700 opacity-30 blur-[100px]"
         style={{
           backgroundImage: game.imageUrl ? `url(${game.imageUrl})` : undefined,
-          backgroundColor: `rgba(${dominantColor}, 0.3)`,
+          backgroundColor: `rgba(${dominantColor}, 0.25)`,
           backgroundPosition: 'center',
           backgroundSize: 'cover'
         }}
@@ -107,7 +141,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
       {/* Lightbox para Screenshot Expandida */}
       {selectedScreenshot && (
         <div
-          className="fixed inset-0 z-60 flex items-center justify-center bg-black/95 p-4"
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-4"
           onClick={() => setSelectedScreenshot(null)}
         >
           <button
@@ -124,19 +158,20 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
         </div>
       )}
 
-      {/* Janela Principal Modal - Vidro Translúcido Glassmorphism */}
+      {/* Janela Principal Modal - Centralizada, altura contida a 90vh com rolagem interna */}
       <div
-        className="relative w-full max-w-4xl rounded-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 transition-all"
+        className="relative my-auto w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden shadow-2xl z-10 transition-all"
         style={{
-          background: `linear-gradient(155deg, rgba(${dominantColor}, 0.22) 0%, rgba(13, 15, 23, 0.88) 40%, rgba(7, 8, 14, 0.96) 100%)`,
+          background: `linear-gradient(155deg, rgba(${dominantColor}, 0.22) 0%, rgba(13, 15, 23, 0.95) 35%, rgba(7, 8, 14, 0.98) 100%)`,
           backdropFilter: 'blur(32px)',
           WebkitBackdropFilter: 'blur(32px)',
           border: `1px solid rgba(${dominantColor}, 0.35)`,
           boxShadow: `0 25px 70px -15px rgba(0, 0, 0, 0.95), 0 0 35px -5px rgba(${dominantColor}, 0.3)`
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Banner do Jogo */}
-        <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-black/40">
+        <div className="relative h-44 sm:h-56 w-full overflow-hidden shrink-0 bg-black/40">
           {game.imageUrl && (
             <img
               src={game.imageUrl}
@@ -204,15 +239,13 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           </div>
         </div>
 
-        {/* Player de Trilha Sonora Tema In-App (Autoplay ao abrir o card) */}
-        {activeThemeUrl && (
-          <div className="px-6 pt-4">
+        {/* Corpo com Rolagem Interna Elegante */}
+        <div className="overflow-y-auto flex-1 p-5 sm:p-6 space-y-5">
+          {/* Player de Trilha Sonora Tema In-App (Autoplay ao abrir o card) */}
+          {activeThemeUrl && (
             <YouTubeThemePlayer themeUrl={activeThemeUrl} gameTitle={game.title} />
-          </div>
-        )}
+          )}
 
-        {/* Conteúdo Detalhado */}
-        <div className="p-6 space-y-6">
           {/* Métricas Rápidas (Tempo, Data, Metacritic) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center gap-3">
@@ -342,6 +375,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -8,11 +8,23 @@ O **Gamer's Vault** é um aplicativo desktop moderno construído com **Electron*
 
 ## ✨ Funcionalidades Principais
 
+- 🎵 **Trilha Sonora de Fundo (EA Trax)**:
+  - Sistema de música ambiente estilo FIFA / EA Trax com reprodução automática, shuffle aleatório inteligente e notificação deslizante de faixas.
+  - Pausa inteligente sincronizada quando o tema oficial de um jogo é reproduzido.
+
+- 🎬 **Abertura Cinemática & Splash de Vídeo**:
+  - Tela de splash com suporte a vídeo personalizado (`public/intro.mp4`) em fundo preto puro (#000000) e fallback para logo holográfica animada.
+  - Suporte a pular intro (`ESC`, `Espaço`, clique) com transição suave e início sincronizado da música.
+
+- 🎨 **Temas Visuais Gamer & Iluminação Atmosférica**:
+  - 5 paletas completas e vibrantes: *Cyber Emerald*, *Electric Cyan*, *Solar Amber*, *Synthwave Void* e *Blood Crimson*.
+  - Superfícies escuras ricas e bordas coloridas sem artefatos, com aura radial atmosférica no topo.
+
 - 🏛️ **Vault & Acervo Pessoal**:
-  - Cards visuais com capas em alta definição, tempo de jogo e badges de nota coloridas em neon.
-  - Filtros rápidos por Status (*Finalizado*, *Quero Jogar*, *Jogando*, *Abandonado*).
-  - Ordenação dinâmica por Nota, Data de Conclusão, Tempo de Jogo, Título (A-Z) ou Metacritic.
-  - Busca textual instantânea por título e gênero.
+  - Cards visuais com capas em alta definição, tempo de jogo, data de conclusão e badges neon.
+  - Ordenação padrão por Data (mais recentes no topo), Nota, Tempo de Jogo, Título (A-Z) ou Metacritic.
+  - Modais montados com React Portal, fechamento por tecla ESC, clique fora do card e rolagem interna contida a 90vh.
+  - Filtros rápidos por Status (*Finalizado*, *Quero Jogar*, *Jogando*, *Abandonado*) e busca instantânea.
 
 - 🎬 **Visão Expandida Cinematográfica**:
   - Banner imersivo, análise crítica completa, dados do Metacritic e tags oficiais da RAWG.

@@ -32,7 +32,10 @@ export default function TitleBar({ updateInfo, onOpenUpdateModal }) {
           v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0'} DESKTOP
         </span>
         <div className="hidden md:flex items-center gap-1.5 text-[10px] text-gray-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-bright shadow-[0_0_8px_#3dd69b]"></span>
+          <span 
+            className="w-1.5 h-1.5 rounded-full bg-accent-bright"
+            style={{ boxShadow: '0 0 8px var(--accent-bright)' }}
+          />
           <span className="text-gray-300">CORE ONLINE</span>
         </div>
       </div>

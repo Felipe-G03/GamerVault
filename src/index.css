@@ -4,19 +4,38 @@
 
 @layer base {
   :root {
-    --bg-primary: #07080c;
-    --surface-dark: #10121a;
-    --accent-neon: #3dd69b;
-    --accent-cyan: #06b6d4;
-    --accent-orange: #f97316;
+    --bg-primary: #040a07;
+    --surface-low: #06100b;
+    --surface-low-rgb: 6, 16, 11;
+    --surface-default: #0b1711;
+    --surface-default-rgb: 11, 23, 17;
+    --surface-container: #102119;
+    --surface-container-rgb: 16, 33, 25;
+    --surface-high: #173024;
+    --surface-high-rgb: 23, 48, 36;
+    --surface-higher: #214333;
+    --surface-higher-rgb: 33, 67, 51;
+    --border-default: #193829;
+    --border-default-rgb: 25, 56, 41;
+    --border-subtle: #0f241a;
+    --border-subtle-rgb: 15, 36, 26;
+    --border-bright: #265941;
+    --border-bright-rgb: 38, 89, 65;
+    --accent-primary: #10b981;
+    --accent-rgb: 16, 185, 129;
+    --accent-bright: #3dd69b;
+    --accent-bright-rgb: 61, 214, 155;
+    --accent-glow: rgba(61, 214, 155, 0.35);
+    --accent-subtle: rgba(16, 185, 129, 0.18);
   }
 
   body {
-    background-color: #07080c;
+    background-color: var(--bg-primary, #040a07);
     color: #f1f5f9;
     font-family: 'Inter', sans-serif;
     user-select: none;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.4s ease;
   }
 
   /* Custom Dark Gamer Scrollbar */
@@ -25,14 +44,14 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #0a0c12;
+    background: var(--surface-low, #06100b);
   }
   ::-webkit-scrollbar-thumb {
-    background: #232738;
+    background: var(--border-default, #193829);
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #3dd69b;
+    background: var(--accent-bright, #3dd69b);
   }
 }
 
@@ -43,14 +62,14 @@
 
 /* Glassmorphism & Gamer Card Borders */
 .glass-panel {
-  background: rgba(16, 18, 26, 0.85);
+  background: rgba(var(--surface-container-rgb, 16, 33, 25), 0.85);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--border-default-rgb, 25, 56, 41), 0.7);
 }
 
 .glass-panel-hover:hover {
-  border-color: rgba(61, 214, 155, 0.4);
-  box-shadow: 0 0 20px -5px rgba(61, 214, 155, 0.25);
+  border-color: var(--accent-bright, #3dd69b);
+  box-shadow: 0 0 20px -5px var(--accent-glow);
 }
 
 /* Audio visualizer equalizer bars */
@@ -75,3 +94,45 @@
 .animate-eq-2 { animation: eq-bounce-2 0.7s ease-in-out infinite 0.15s; }
 .animate-eq-3 { animation: eq-bounce-3 0.9s ease-in-out infinite 0.3s; }
 .animate-eq-4 { animation: eq-bounce-4 0.65s ease-in-out infinite 0.2s; }
+
+/* Page Transitions (Pure Opacity to keep position: fixed modals pinned to the true viewport) */
+@keyframes page-enter {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.18s ease-out;
+}
+
+/* EA Trax Music Notification Banner */
+@keyframes ea-trax-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  70% {
+    transform: translateX(-4px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-ea-trax-in {
+  animation: ea-trax-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Tactile Elastic Button/Card Motion */
+.active-press {
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.active-press:active {
+  transform: scale(0.975);
+}
+

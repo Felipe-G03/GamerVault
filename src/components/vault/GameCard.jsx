@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Star, Play, Sparkles } from 'lucide-react';
+import { Clock, Star, Play, Sparkles, Calendar } from 'lucide-react';
 
 export default function GameCard({ game, onClick }) {
   // Cor dinâmica da badge de nota baseada no valor
@@ -12,12 +12,31 @@ export default function GameCard({ game, onClick }) {
     return 'bg-gray-700 text-gray-300';
   };
 
+  // Formata a data (YYYY-MM-DD -> DD/MM/AAAA ou createdAt)
+  const formatCardDate = (dateStr, createdAt) => {
+    if (dateStr) {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return dateStr;
+    }
+    if (createdAt?.toDate) {
+      const d = createdAt.toDate();
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      return `${day}/${month}/${d.getFullYear()}`;
+    }
+    return null;
+  };
+
   const formattedRating = Number(game.rating) ? Number(game.rating).toFixed(1) : '-';
+  const cardDate = formatCardDate(game.dateFinished, game.createdAt);
 
   return (
     <div
       onClick={() => onClick(game)}
-      className="group relative flex flex-col rounded-xl overflow-hidden bg-[#11131a] border border-[#232738] hover:border-accent-bright/60 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-neon-green hover:-translate-y-1 select-none"
+      className="group relative flex flex-col rounded-xl overflow-hidden bg-surface border border-border hover:border-accent-bright/60 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-neon-green hover:-translate-y-1 select-none active-press"
     >
       {/* Imagem de Capa do Jogo com Aspect Ratio 16:9 / 3:2 */}
       <div className="relative aspect-video sm:aspect-[16/10] w-full overflow-hidden bg-surface-container">
@@ -29,13 +48,13 @@ export default function GameCard({ game, onClick }) {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-[#151722] text-gray-500 text-xs">
+          <div className="w-full h-full flex items-center justify-center bg-surface-container text-gray-500 text-xs">
             Sem Imagem
           </div>
         )}
 
         {/* Gradiente escuro no fundo da imagem para legibilidade */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#11131a] via-transparent to-black/30 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-black/30 pointer-events-none" />
 
         {/* Badge Circular de Nota (Top Right) */}
         {game.rating > 0 && (
@@ -77,13 +96,24 @@ export default function GameCard({ game, onClick }) {
           {game.title}
         </h3>
 
-        {/* Informações adicionais (Tempo de Jogo e Gênero) */}
+        {/* Informações adicionais (Tempo de Jogo, Data e Metacritic) */}
         <div className="mt-2 flex items-center justify-between text-xs text-gray-400 font-medium">
-          <div className="flex items-center gap-1.5 text-amber-500">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="text-gray-300 font-mono text-[11px]">
-              {game.playtime ? `${game.playtime}h` : '0h'}
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1 text-amber-500" title="Tempo de jogo">
+              <Clock className="w-3.5 h-3.5" />
+              <span className="text-gray-300 font-mono text-[11px]">
+                {game.playtime ? `${game.playtime}h` : '0h'}
+              </span>
+            </div>
+
+            {cardDate && (
+              <div className="flex items-center gap-1 text-cyan-400/90" title="Data do jogo">
+                <Calendar className="w-3 h-3 text-cyan-400" />
+                <span className="text-gray-300 font-mono text-[10px]">
+                  {cardDate}
+                </span>
+              </div>
+            )}
           </div>
 
           {game.metacritic && (

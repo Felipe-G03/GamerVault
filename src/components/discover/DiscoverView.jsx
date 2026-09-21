@@ -239,7 +239,7 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
       </div>
 
       {/* Barra de Controles: Categorias, Ano e Filtros */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#11131a] p-4 rounded-xl border border-[#232738]">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-surface p-4 rounded-xl border border-border">
         {/* Categorias (Pílulas) */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
           {CATEGORIES.map((cat) => {
@@ -275,7 +275,7 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
                 className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer pr-1 border-b border-accent-bright/40 pb-0.5"
               >
                 {AVAILABLE_YEARS.map((y) => (
-                  <option key={y} value={y} className="bg-[#11131a] text-white">
+                  <option key={y} value={y} className="bg-surface text-white">
                     {y}
                   </option>
                 ))}
@@ -375,7 +375,7 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
 
       {/* Lista Vazia */}
       {!isLoading && !errorMessage && displayedGames.length === 0 && (
-        <div className="py-16 text-center space-y-2 border border-dashed border-border/70 rounded-xl p-8 bg-[#11131a]/50">
+        <div className="py-16 text-center space-y-2 border border-dashed border-border/70 rounded-xl p-8 bg-surface/50">
           <Gamepad2 className="w-10 h-10 text-gray-600 mx-auto" />
           <h3 className="text-sm font-semibold text-gray-300">Nenhum jogo encontrado nesta página</h3>
           <p className="text-xs text-gray-500 max-w-sm mx-auto">
@@ -400,12 +400,12 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
             return (
               <div
                 key={game.id}
-                className={`group relative flex flex-col rounded-xl overflow-hidden bg-[#11131a] border transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1 ${
+                className={`group relative flex flex-col rounded-xl overflow-hidden bg-surface border transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1 ${
                   finished
                     ? 'border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.15)] hover:border-amber-400'
                     : inWishlist
                     ? 'border-cyan-500/40 hover:border-cyan-400'
-                    : 'border-[#232738] hover:border-accent-bright/50'
+                    : 'border-border hover:border-accent-bright/50'
                 }`}
               >
                 {/* Imagem do Jogo com Aspect Ratio 16:9 */}
@@ -418,13 +418,13 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#151722] text-gray-500 text-xs">
+                    <div className="w-full h-full flex items-center justify-center bg-surface-container text-gray-500 text-xs">
                       Sem Imagem
                     </div>
                   )}
 
                   {/* Gradiente de sombra */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#11131a] via-transparent to-black/40 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-black/40 pointer-events-none" />
 
                   {/* Posição no Topo: Rank numérico no Top 250 ou Metacritic */}
                   <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5">

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Gamepad2, Compass, PlusCircle, Users, BarChart3, User, LogOut } from 'lucide-react';
+import BgmPlayer from '../common/BgmPlayer';
 
 export default function Navbar({ activeTab, setActiveTab, profile, onLogout }) {
   const tabs = [
@@ -12,14 +13,14 @@ export default function Navbar({ activeTab, setActiveTab, profile, onLogout }) {
   ];
 
   return (
-    <header className="w-full bg-[#0a0b10] border-b border-border select-none">
+    <header className="w-full bg-surface-low border-b border-border select-none transition-colors duration-500">
       {/* Top Banner / Hero Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-3 flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Sair / Logout */}
         <div className="flex items-center gap-2 self-start md:self-auto order-2 md:order-1">
           <button
             onClick={onLogout}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-800/60 border border-red-700/60 text-red-200 text-xs font-semibold tracking-wide transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-red-900/40 hover:bg-red-800/60 border border-red-700/60 text-red-200 text-xs font-semibold tracking-wide transition-all shadow-sm active-press"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sair</span>
@@ -47,8 +48,10 @@ export default function Navbar({ activeTab, setActiveTab, profile, onLogout }) {
           </div>
         </div>
 
-        {/* Espaçador para balancear com o botão Sair */}
-        <div className="hidden md:block w-24 order-3"></div>
+        {/* Player de Trilha Sonora de Fundo (FIFA / EA Trax) */}
+        <div className="order-3 flex items-center justify-end">
+          <BgmPlayer />
+        </div>
       </div>
 
       {/* Navegação por Abas (Estilo Original / Stitch) */}
@@ -61,7 +64,7 @@ export default function Navbar({ activeTab, setActiveTab, profile, onLogout }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`group relative flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`group relative flex items-center gap-2 px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap active-press ${
                   isActive
                     ? 'text-white'
                     : 'text-gray-400 hover:text-gray-200'

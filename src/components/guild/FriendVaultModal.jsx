@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Clock, Star, Gamepad2, Loader2, ArrowLeft } from 'lucide-react';
 import { getUserGames } from '../../services/gamesService';
 import GameExpandedModal from '../vault/GameExpandedModal';
@@ -7,6 +8,26 @@ export default function FriendVaultModal({ friend, onClose }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
+
+  // Travar o scroll da página enquanto o modal estiver aberto
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  // Tecla ESC para fechar
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   useEffect(() => {
     async function load() {
@@ -26,9 +47,16 @@ export default function FriendVaultModal({ friend, onClose }) {
 
   const finishedGames = games.filter(g => g.status === 'Finalizado');
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col bg-[#0d0f16] border border-border rounded-2xl overflow-hidden shadow-2xl">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative my-auto w-full max-w-5xl max-h-[90vh] flex flex-col bg-[#0d0f16] border border-border rounded-2xl overflow-hidden shadow-2xl">
         {/* Cabeçalho */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-container">
           <div className="flex items-center gap-3">
@@ -120,6 +148,7 @@ export default function FriendVaultModal({ friend, onClose }) {
           onDelete={() => {}} // Somente leitura
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

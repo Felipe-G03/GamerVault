@@ -23,7 +23,11 @@ function createWindow() {
       contextIsolation: true,
       webSecurity: false // Facilita carregar embeds e imagens de capas sem bloqueios CORS estritos no app
     },
-    icon: path.join(__dirname, '../public/gamepad.svg')
+    icon: fs.existsSync(path.join(__dirname, '../public/icon.ico'))
+      ? path.join(__dirname, '../public/icon.ico')
+      : fs.existsSync(path.join(__dirname, '../public/icon.png'))
+      ? path.join(__dirname, '../public/icon.png')
+      : path.join(__dirname, '../public/gamepad.svg')
   });
 
   // Em modo de desenvolvimento, carrega a URL do Vite

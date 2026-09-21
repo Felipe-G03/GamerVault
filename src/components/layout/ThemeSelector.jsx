@@ -57,7 +57,7 @@ export default function ThemeSelector() {
         <div className="absolute right-0 mt-1.5 w-60 rounded-xl bg-[#0f111a] border border-border shadow-[0_10px_30px_rgba(0,0,0,0.8)] py-1.5 z-50 animate-fadeIn font-mono text-xs backdrop-blur-md">
           <div className="px-3 py-1.5 border-b border-border/60 text-[10px] uppercase tracking-widest text-gray-400 font-bold flex items-center justify-between">
             <span>Selecione o Tema</span>
-            <span className="text-accent-bright font-normal">v2.1.1</span>
+            <span className="text-accent-bright font-normal">v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.1.2'}</span>
           </div>
 
           <div className="p-1 space-y-1">

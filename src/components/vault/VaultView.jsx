@@ -33,7 +33,7 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
   const [selectedGame, setSelectedGame] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Finalizado'); // 'Finalizado', 'Desejo', 'Todos'
-  const [sortBy, setSortBy] = useState('rating'); // 'rating', 'dateFinished', 'playtime', 'title'
+  const [sortBy, setSortBy] = useState('dateFinished'); // 'dateFinished' como padrão, 'rating', 'playtime', 'title'
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' ou 'desc'
   const [collapsedYears, setCollapsedYears] = useState({});
 
@@ -113,6 +113,22 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
         if (sortBy === 'rating' || sortBy === 'playtime' || sortBy === 'metacritic') {
           valueA = Number(valueA) || 0;
           valueB = Number(valueB) || 0;
+        } else if (sortBy === 'dateFinished') {
+          const parseGameDate = (g) => {
+            if (g.dateFinished) {
+              const d = new Date(g.dateFinished).getTime();
+              if (!isNaN(d)) return d;
+            }
+            if (g.createdAt?.toDate) {
+              return g.createdAt.toDate().getTime();
+            }
+            if (g.createdAt?.seconds) {
+              return g.createdAt.seconds * 1000;
+            }
+            return 0;
+          };
+          valueA = parseGameDate(a);
+          valueB = parseGameDate(b);
         } else if (sortBy === 'title') {
           valueA = (valueA || '').toLowerCase();
           valueB = (valueB || '').toLowerCase();
@@ -201,8 +217,8 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
               onChange={e => setSortBy(e.target.value)}
               className="bg-transparent text-xs text-white focus:outline-none cursor-pointer font-medium"
             >
-              <option value="rating" className="bg-[#10121a]">Nota</option>
               <option value="dateFinished" className="bg-[#10121a]">Data</option>
+              <option value="rating" className="bg-[#10121a]">Nota</option>
               <option value="playtime" className="bg-[#10121a]">Tempo de Jogo</option>
               <option value="title" className="bg-[#10121a]">Título (A-Z)</option>
               <option value="metacritic" className="bg-[#10121a]">Metacritic</option>

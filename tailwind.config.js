@@ -8,24 +8,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: 'var(--bg-primary, #07080c)',
+        background: 'var(--bg-primary, #040a07)',
         surface: {
-          DEFAULT: '#10121a',
-          low: '#0a0c10',
-          container: '#161822',
-          high: '#1f2230',
-          higher: '#2b2f42'
+          DEFAULT: 'rgba(var(--surface-default-rgb, 11, 23, 17), <alpha-value>)',
+          low: 'rgba(var(--surface-low-rgb, 6, 16, 11), <alpha-value>)',
+          container: 'rgba(var(--surface-container-rgb, 16, 33, 25), <alpha-value>)',
+          high: 'rgba(var(--surface-high-rgb, 23, 48, 36), <alpha-value>)',
+          higher: 'rgba(var(--surface-higher-rgb, 33, 67, 51), <alpha-value>)'
         },
         border: {
-          DEFAULT: '#262a3b',
-          subtle: '#181b26',
-          bright: '#3d435d'
+          DEFAULT: 'rgba(var(--border-default-rgb, 25, 56, 41), <alpha-value>)',
+          subtle: 'rgba(var(--border-subtle-rgb, 15, 36, 26), <alpha-value>)',
+          bright: 'rgba(var(--border-bright-rgb, 38, 89, 65), <alpha-value>)'
         },
         accent: {
           DEFAULT: 'rgba(var(--accent-rgb, 16, 185, 129), <alpha-value>)',
           bright: 'rgba(var(--accent-bright-rgb, 61, 214, 155), <alpha-value>)',
-          glow: 'var(--accent-glow, rgba(61, 214, 155, 0.25))',
-          subtle: 'var(--accent-subtle, #0d3829)'
+          glow: 'var(--accent-glow, rgba(61, 214, 155, 0.35))',
+          subtle: 'var(--accent-subtle, rgba(16, 185, 129, 0.18))'
         },
         orange: {
           DEFAULT: '#f97316',
