@@ -12,6 +12,7 @@ import AddGameView from './components/add-game/AddGameView';
 import GuildView from './components/guild/GuildView';
 import StatsView from './components/stats/StatsView';
 import ProfileView from './components/profile/ProfileView';
+import DiscoverView from './components/discover/DiscoverView';
 import AuthModal from './components/auth/AuthModal';
 import UpdateModal from './components/common/UpdateModal';
 import { Loader2 } from 'lucide-react';
@@ -151,6 +152,38 @@ export default function App() {
     setActiveTab('adicionar');
   };
 
+  // Adicionar diretamente à Lista de Desejos a partir da aba Explorar
+  const handleDirectAddWishlist = async (gameData) => {
+    if (!user?.uid) return;
+    try {
+      const added = await addGame(user.uid, gameData);
+      setGames((prev) => [added, ...prev]);
+    } catch (e) {
+      console.error('Erro ao adicionar à lista de desejos:', e);
+      throw e;
+    }
+  };
+
+  // Selecionar jogo da aba Explorar para registrar com formulário completo
+  const handleSelectGameToRegister = (rawgGame) => {
+    setEditingGame({
+      title: rawgGame.title,
+      imageUrl: rawgGame.imageUrl || '',
+      metacritic: rawgGame.metacritic || null,
+      genre: rawgGame.genres || '',
+      genre_slugs: rawgGame.genre_slugs || [],
+      tags: rawgGame.tags || [],
+      status: 'Finalizado',
+      dateFinished: new Date().toISOString().split('T')[0],
+      playtime: '',
+      rating: 8,
+      review: '',
+      screenshotsText: '',
+      themeUrl: ''
+    });
+    setActiveTab('adicionar');
+  };
+
   if (loadingAuth) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-accent-bright font-mono gap-3">
@@ -212,6 +245,14 @@ export default function App() {
                     }}
                     onEditGame={handleEditGame}
                     onDeleteGame={handleDeleteGame}
+                  />
+                )}
+
+                {activeTab === 'explorar' && (
+                  <DiscoverView
+                    games={games}
+                    onDirectAddWishlist={handleDirectAddWishlist}
+                    onSelectGameToRegister={handleSelectGameToRegister}
                   />
                 )}
 

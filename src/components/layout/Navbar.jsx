@@ -1,9 +1,10 @@
 import React from 'react';
-import { Gamepad2, PlusCircle, Users, BarChart3, User, LogOut } from 'lucide-react';
+import { Gamepad2, Compass, PlusCircle, Users, BarChart3, User, LogOut } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab, profile, onLogout }) {
   const tabs = [
     { id: 'vault', label: 'Vault', icon: Gamepad2 },
+    { id: 'explorar', label: 'Explorar', icon: Compass },
     { id: 'adicionar', label: 'Adicionar Jogo', icon: PlusCircle },
     { id: 'guilda', label: 'Guilda', icon: Users },
     { id: 'estatisticas', label: 'Estatísticas', icon: BarChart3 },
