@@ -31,14 +31,16 @@ A ideia não é correr para zerar o máximo de títulos possíveis, mas sim valo
 
 ### 1. Sua Sala de Recordações e Conquistas
 * **Coleções Organizadas por Ano:** Cada jogo finalizado vai para a coleção do respectivo ano (ex: Coleção 2026, 2025, 2024), mostrando o total de horas dedicadas e a média das suas avaliações naquele período.
+* **Coleção de Dropados / Abandonados:** Nem todo jogo combina com você no momento, e tudo bem! Registre as horas dedicadas e o motivo do abandono sem atribuição de nota. Se resolver dar uma segunda chance no futuro, com apenas um clique você pode marcar como "Finalizei esse jogo!", inserindo nota e resenha completa.
 * **Classificação Livre da Sua Biblioteca:** Ordene todo o seu acervo por tempo de jogo (para relembrar quais mundos mais prenderam sua atenção), nota pessoal, pontuação do Metacritic ou ordem alfabética.
-* **Status Intuitivos:** Separe claramente o que você está jogando no momento, o que finalizou com sucesso, o que está na fila com prioridade e o que decidiu pausar.
+* **Status Intuitivos:** Separe claramente o que você está jogando no momento, o que finalizou com sucesso, o que está na fila de desejos e o que decidiu abandonar.
 
 ### 2. A Guilda: Companheirismo Sem Pressão
 Jogar fica muito mais legal quando você pode trocar impressões com amigos. O sistema de Guilda foi feito para incentivar e aproximar:
-* **Feed de Conquistas em Tempo Real:** Veja quando alguém da sua guilda zerou um título, a nota que deu e o que achou da experiência.
+* **Feed de Atividades em Tempo Real:** Veja quando alguém da sua guilda zerou um título ou decidiu abandonar um jogo, conferindo as opiniões e notas de cada um.
+* **Pódios Descontraídos:** Rankings dinâmicos para celebrar tanto quem zerou os jogos mais longos quanto quem acumulou mais drops ou jogou mais horas antes de largar.
 * **Espiar a Coleção do Amigo:** Abra o perfil de um amigo em modo leitura para ver as avaliações dele e pegar recomendações sinceras para a sua próxima aventura.
-* **Sem Competição Tóxica:** Não se trata de quem joga mais rápido, mas de celebrar as histórias que cada um viveu.
+* **Sem Competição Tóxica:** Não se trata de quem joga mais rápido, mas de celebrar as histórias e escolhas de cada um.
 
 ### 3. Descoberta Curada de Jogos
 * **Catálogo Global (RAWG API):** Navegação por mais de 500 mil jogos com carrosséis temáticos de RPG, Ação, Indies, Mundos Abertos e Clássicos.
@@ -126,6 +128,11 @@ O arquivo gerado ficará disponível na pasta `dist-electron/`.
 
 ## Histórico de Versões
 
+* **v2.1.6:**
+  * Nova coleção e status dedicado para Jogos Dropados / Abandonados, registrando horas e motivo sem exigência de nota.
+  * Fluxo de retomada com o botão "Finalizei esse jogo!" para transferir um drop para finalizados com avaliação completa.
+  * Novos pódios descontraídos na Guilda: "Mais Drops" e "Drop Mais Longe".
+  * Filtro rápido na Guilda para acompanhar os jogos abandonados pelos membros do seu círculo.
 * **v2.1.5:**
   * Busca integrada de trailers e gameplays com a YouTube Data API v3.
   * Tradução dinâmica de descrições da RAWG para português.

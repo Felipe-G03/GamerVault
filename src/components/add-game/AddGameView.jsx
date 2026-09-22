@@ -10,13 +10,14 @@ import {
   Image as ImageIcon,
   Loader2,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Ban
 } from 'lucide-react';
 import { searchRawgGames, getRawgApiKey } from '../../config/rawg';
 import { parseScreenshotUrls } from '../../services/driveUtils';
 import { searchGameTheme } from '../../services/youtubeService';
 import RatingCalculator from './RatingCalculator';
-import { isWishlist } from '../../utils/gameUtils';
+import { isWishlist, isDropped } from '../../utils/gameUtils';
 
 export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) {
   const [step, setStep] = useState(editingGame ? 2 : 1);
@@ -41,6 +42,7 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
       playtime: '',
       rating: 8,
       review: '',
+      dropReason: '',
       screenshotsText: '',
       themeUrl: ''
     }
@@ -54,6 +56,7 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
     if (editingGame) {
       setSelectedGame({
         ...editingGame,
+        dropReason: editingGame.dropReason || (isDropped(editingGame.status) ? editingGame.review : '') || '',
         screenshotsText: Array.isArray(editingGame.screenshots)
           ? editingGame.screenshots.join('\n')
           : ''
@@ -100,6 +103,7 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
       playtime: '',
       rating: 8,
       review: '',
+      dropReason: '',
       screenshotsText: '',
       themeUrl: ''
     });
@@ -136,15 +140,17 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
     setIsSaving(true);
     try {
       const isWish = isWishlist(selectedGame.status);
+      const isDrop = isDropped(selectedGame.status);
       const isFin = selectedGame.status === 'Finalizado';
 
       const gamePayload = {
         title: selectedGame.title,
         status: selectedGame.status,
-        rating: isWish ? 0 : (Number(selectedGame.rating) || 0),
+        rating: (isWish || isDrop) ? 0 : (Number(selectedGame.rating) || 0),
         playtime: isWish ? '0' : String(selectedGame.playtime || '0'),
         dateFinished: isWish ? '' : (selectedGame.dateFinished || (isFin ? new Date().toISOString().split('T')[0] : '')),
-        review: isWish ? '' : (selectedGame.review || ''),
+        review: isWish ? '' : (isDrop ? (selectedGame.dropReason || selectedGame.review || '') : (selectedGame.review || '')),
+        dropReason: isDrop ? (selectedGame.dropReason || selectedGame.review || '') : '',
         imageUrl: selectedGame.imageUrl || '',
         metacritic: selectedGame.metacritic ? Number(selectedGame.metacritic) : null,
         genre: selectedGame.genre || '',
@@ -335,6 +341,7 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
             >
               <option value="Finalizado">Finalizado</option>
               <option value="Quero Jogar">Quero Jogar (Backlog / Desejo)</option>
+              <option value="Dropado">Dropado / Abandonado</option>
             </select>
           </div>
 
@@ -435,6 +442,58 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
                 ></textarea>
               </div>
             </>
+          ) : isDropped(selectedGame.status) ? (
+            /* MODO DROPADO / ABANDONADO */
+            <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-800/40 space-y-4">
+              <div className="flex items-center gap-2 text-amber-400 text-xs font-mono font-semibold">
+                <Ban className="w-4 h-4 text-amber-400" />
+                <span>Modo Dropado / Abandonado ativado</span>
+              </div>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Poupar seu tempo e admitir que um jogo não engatou é sinal de maturidade! Este jogo será catalogado na sua coleção de Dropados sem nota de avaliação. Se um dia você decidir terminá-lo, poderá transformá-lo em "Finalizado".
+              </p>
+
+              {/* TEMPO DE JOGO ATÉ O DROP */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono uppercase text-amber-300 font-semibold">
+                  TEMPO JOGADO ATÉ O DROP (EM HORAS)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: 14"
+                  value={selectedGame.playtime}
+                  onChange={(e) => setSelectedGame({ ...selectedGame, playtime: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* DATA DO DROP */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono uppercase text-amber-300 font-semibold">
+                  QUANDO VOCÊ DROPOU? (OPCIONAL)
+                </label>
+                <input
+                  type="date"
+                  value={selectedGame.dateFinished}
+                  onChange={(e) => setSelectedGame({ ...selectedGame, dateFinished: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              {/* MOTIVO DO DROP */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono uppercase text-amber-300 font-semibold">
+                  POR QUE VOCÊ ABANDONOU? (MOTIVO DO DROP)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Ex: A história perdeu o ritmo após o capítulo 3, combate repetitivo, bugs frustrantes..."
+                  value={selectedGame.dropReason || selectedGame.review}
+                  onChange={(e) => setSelectedGame({ ...selectedGame, dropReason: e.target.value, review: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-[#151722] border border-[#272a3b] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 resize-y"
+                ></textarea>
+              </div>
+            </div>
           ) : (
             /* MODO QUERO JOGAR (Campos simplificados) */
             <div className="p-4 rounded-xl bg-surface-container/60 border border-border/80 space-y-4">

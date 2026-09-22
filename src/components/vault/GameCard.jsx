@@ -1,7 +1,11 @@
 import React from 'react';
-import { Clock, Star, Play, Sparkles, Calendar } from 'lucide-react';
+import { Clock, Star, Play, Sparkles, Calendar, Ban } from 'lucide-react';
+import { isDropped, isWishlist } from '../../utils/gameUtils';
 
 export default function GameCard({ game, onClick }) {
+  const isDrop = isDropped(game.status);
+  const isWish = isWishlist(game.status);
+
   // Cor dinâmica da badge de nota baseada no valor
   const getRatingBadgeClass = (score) => {
     const num = Number(score);
@@ -57,7 +61,7 @@ export default function GameCard({ game, onClick }) {
         <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-black/30 pointer-events-none" />
 
         {/* Badge Circular de Nota (Top Right) */}
-        {game.rating > 0 && (
+        {!isDrop && !isWish && game.rating > 0 && (
           <div className="absolute top-2.5 right-2.5 z-10">
             <div
               className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs tracking-tight transition-transform group-hover:scale-110 ${getRatingBadgeClass(
@@ -69,8 +73,18 @@ export default function GameCard({ game, onClick }) {
           </div>
         )}
 
-        {/* Status Pill (se não for finalizado) */}
-        {game.status && game.status !== 'Finalizado' && (
+        {/* Badge de Dropado (Top Right) */}
+        {isDrop && (
+          <div className="absolute top-2.5 right-2.5 z-10">
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-950/80 border border-amber-600/70 text-[10px] font-mono font-bold text-amber-300 shadow-sm backdrop-blur-md">
+              <Ban className="w-3 h-3 text-amber-400" />
+              DROPADO
+            </span>
+          </div>
+        )}
+
+        {/* Status Pill (se não for finalizado nem dropado) */}
+        {game.status && game.status !== 'Finalizado' && !isDrop && (
           <div className="absolute top-2.5 left-2.5 z-10">
             <span className="px-2 py-0.5 rounded bg-surface/80 backdrop-blur-sm border border-border text-[10px] font-semibold text-cyan-400">
               {game.status}

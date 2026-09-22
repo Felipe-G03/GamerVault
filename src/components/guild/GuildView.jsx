@@ -14,7 +14,9 @@ import {
   Hourglass,
   Calendar,
   Flame,
-  Award
+  Award,
+  Ban,
+  AlertOctagon
 } from 'lucide-react';
 import { getGuildData } from '../../services/guildService';
 import FriendVaultModal from './FriendVaultModal';
@@ -53,7 +55,8 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
   // Filtra as atividades do feed
   const filteredActivities = useMemo(() => {
     return data.activities.filter(item => {
-      if (activeFilter === 'highScore' && Number(item.rating) < 9.0) return false;
+      if (activeFilter === 'drops' && !item.isDropped) return false;
+      if (activeFilter === 'highScore' && (item.isDropped || Number(item.rating) < 9.0)) return false;
       if (activeFilter === 'reviewed' && (!item.review || item.review.trim().length === 0)) return false;
 
       if (searchTerm) {
@@ -91,6 +94,14 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
       if (rankingFilter === 'fasting') {
         return (b.daysSinceLastGame || 0) - (a.daysSinceLastGame || 0);
       }
+      if (rankingFilter === 'drops') {
+        return (b.droppedCount || 0) - (a.droppedCount || 0);
+      }
+      if (rankingFilter === 'longestDrop') {
+        const hoursA = a.longestDroppedGame?.hours || 0;
+        const hoursB = b.longestDroppedGame?.hours || 0;
+        return hoursB - hoursA;
+      }
       // Padrão 'count' (mais jogos)
       return (b.completedCount || 0) - (a.completedCount || 0);
     });
@@ -102,7 +113,9 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
     { id: 'shortest', label: 'Mais Curto', icon: Clock },
     { id: 'month', label: 'No Mês', icon: Calendar },
     { id: 'highestScore', label: 'Maior Nota', icon: Star },
-    { id: 'fasting', label: 'Em Jejum', icon: Hourglass }
+    { id: 'fasting', label: 'Em Jejum', icon: Hourglass },
+    { id: 'drops', label: 'Mais Drops', icon: Ban },
+    { id: 'longestDrop', label: 'Drop Mais Longe', icon: AlertOctagon }
   ];
 
   return (
@@ -191,6 +204,16 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
           >
             Comentados
           </button>
+          <button
+            onClick={() => setActiveFilter('drops')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              activeFilter === 'drops'
+                ? 'bg-amber-950/50 text-amber-300 border border-amber-700/60'
+                : 'text-gray-400 hover:text-white hover:bg-surface'
+            }`}
+          >
+            Dropados
+          </button>
         </div>
 
         <div className="relative sm:w-72">
@@ -220,7 +243,7 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
                 key={item.id}
                 className="p-5 rounded-2xl bg-[#0e1017] border border-[#232738] hover:border-accent/40 transition-all shadow-lg group space-y-3"
               >
-                {/* Header do Card: Membro + Badge de Nota */}
+                {/* Header do Card: Membro + Badge de Nota/Drop */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-surface-high border border-border flex items-center justify-center font-bold text-xs text-accent-bright">
@@ -233,20 +256,28 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
                       >
                         {item.friendName}
                       </button>
-                      <span className="text-gray-400 ml-1.5">finalizou</span>
+                      {item.isDropped ? (
+                        <span className="text-amber-400 font-semibold ml-1.5">dropou um jogo</span>
+                      ) : (
+                        <span className="text-gray-400 ml-1.5">finalizou</span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Badge de Nota Estelar */}
-                  {item.rating > 0 && (
+                  {item.isDropped ? (
+                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-xs font-mono">
+                      <Ban className="w-3.5 h-3.5" />
+                      <span>DROPADO</span>
+                    </div>
+                  ) : item.rating > 0 ? (
                     <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs font-mono">
                       <Star className="w-3.5 h-3.5 fill-current" />
                       <span>{Number(item.rating).toFixed(1)}</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
-                {/* Corpo do Card: Capa + Detalhes + Análise */}
+                {/* Corpo do Card: Capa + Detalhes + Análise/Motivo */}
                 <div className="flex gap-4 items-start">
                   <div className="w-24 sm:w-28 aspect-[16/10] rounded-xl overflow-hidden bg-black shrink-0 border border-border">
                     {item.imageUrl ? (
@@ -269,11 +300,25 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
 
                     <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
                       <span>📅 {item.dateFinished}</span>
-                      {item.playtime && <span>⏱️ {item.playtime}h registradas</span>}
+                      {item.playtime && (
+                        <span>
+                          ⏱️ {item.playtime}h {item.isDropped ? 'antes do drop' : 'registradas'}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Resenha Crítica em Destaque */}
-                    {item.review ? (
+                    {/* Resenha Crítica ou Motivo do Drop em Destaque */}
+                    {item.isDropped ? (
+                      item.dropReason || item.review ? (
+                        <p className="text-xs text-amber-200/90 italic line-clamp-2 pt-1 border-t border-amber-900/30">
+                          "Motivo: {item.dropReason || item.review}"
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-gray-500 italic pt-1">
+                          Jogo abandonado e arquivado no Vault.
+                        </p>
+                      )
+                    ) : item.review ? (
                       <p className="text-xs text-gray-300 italic line-clamp-2 pt-1 border-t border-border/40">
                         "{item.review}"
                       </p>
@@ -285,7 +330,7 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
                   </div>
                 </div>
 
-                {/* Rodapé do Card: Ação Ver Análise */}
+                {/* Rodapé do Card: Ação Ver Detalhes */}
                 <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs">
                   <span className="text-[11px] font-mono text-gray-500">
                     {item.genre || 'Variados'}
@@ -299,16 +344,17 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
                         playtime: item.playtime,
                         dateFinished: item.dateFinished,
                         review: item.review,
+                        dropReason: item.dropReason || item.review,
                         imageUrl: item.imageUrl,
                         genre: item.genre,
                         themeUrl: item.themeUrl,
                         screenshots: item.screenshots,
-                        status: 'Finalizado'
+                        status: item.isDropped ? 'Dropado' : 'Finalizado'
                       })
                     }
                     className="flex items-center gap-1 font-semibold text-accent-bright hover:underline"
                   >
-                    <span>Ver Análise</span>
+                    <span>{item.isDropped ? 'Ver Motivo' : 'Ver Análise'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -423,6 +469,14 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
                                 : `${member.daysSinceLastGame} dias sem zerar`}
                             </span>
                           )}
+                          {rankingFilter === 'drops' && (
+                            <span>🚫 {member.droppedCount || 0} jogos abandonados</span>
+                          )}
+                          {rankingFilter === 'longestDrop' && (
+                            <span className="text-gray-300">
+                              ⚠️ <span className="font-semibold text-white">{member.longestDroppedGame?.title || 'Sem drops'}</span> ({member.longestDroppedGame?.hours || 0}h)
+                            </span>
+                          )}
                           {rankingFilter === 'count' && (
                             <div>
                               <span>{member.completedCount} campanhas ({member.totalHours}h)</span>
@@ -438,7 +492,11 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-xs font-mono font-bold text-emerald-400">
+                      <span className={`text-xs font-mono font-bold ${
+                        rankingFilter === 'drops' || rankingFilter === 'longestDrop'
+                          ? 'text-amber-400'
+                          : 'text-emerald-400'
+                      }`}>
                         {rankingFilter === 'longest'
                           ? `${member.longestGame?.hours || 0}h`
                           : rankingFilter === 'shortest'
@@ -447,6 +505,10 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
                           ? `${member.thisMonthCount} j.`
                           : rankingFilter === 'fasting'
                           ? member.daysSinceLastGame >= 9999 ? '-' : `${member.daysSinceLastGame}d`
+                          : rankingFilter === 'drops'
+                          ? `${member.droppedCount || 0} drops`
+                          : rankingFilter === 'longestDrop'
+                          ? `${member.longestDroppedGame?.hours || 0}h`
                           : `${member.avgRating} méd.`}
                       </span>
                     </div>

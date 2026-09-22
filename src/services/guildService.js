@@ -1,6 +1,6 @@
 import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { isWishlist, isFinished } from '../utils/gameUtils';
+import { isWishlist, isFinished, isDropped } from '../utils/gameUtils';
 
 /**
  * Busca a atividade recente e calcula métricas consolidadas e comparativas da Guilda
@@ -43,13 +43,15 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
         name: memberName,
         isMe: member.isMe,
         completedCount: 0,
+        droppedCount: 0,
         totalHours: 0,
         totalScore: 0,
         ratedCount: 0,
         thisMonthCount: 0,
         latestDateFinished: null,
         longestGame: null,
-        shortestGame: null
+        shortestGame: null,
+        longestDroppedGame: null
       };
 
       // Busca jogos do membro
@@ -70,9 +72,11 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
           }).catch(() => {});
         }
 
-        // Jogo é concluído somente se NÃO for backlog/desejos, NÃO for 'jogando',
+        const isDrop = isDropped(data.status);
+
+        // Jogo é concluído somente se NÃO for backlog/desejos, NÃO for dropado, NÃO for 'jogando',
         // e tiver status de finalizado/zerado ou for legado sem status mas com data
-        const isCompleted = !isWish && statusLower !== 'jogando' && (
+        const isCompleted = !isWish && !isDrop && statusLower !== 'jogando' && (
           isFinished(data.status) ||
           statusLower.includes('finalizado') ||
           statusLower.includes('zerado') ||
@@ -80,7 +84,42 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
           (!data.status && Boolean(data.dateFinished))
         );
 
-        if (isCompleted) {
+        if (isDrop) {
+          const playtime = parseFloat(data.playtime) || 0;
+          const dateDrop = data.dateFinished || (data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : '');
+
+          memberStatsMap[member.id].droppedCount += 1;
+
+          if (playtime > 0) {
+            if (!memberStatsMap[member.id].longestDroppedGame || playtime > memberStatsMap[member.id].longestDroppedGame.hours) {
+              memberStatsMap[member.id].longestDroppedGame = {
+                title: data.title,
+                hours: playtime,
+                reason: data.dropReason || data.review || ''
+              };
+            }
+          }
+
+          // Feed de Atividade para Drops
+          activities.push({
+            id: `${member.id}_${docSnap.id}`,
+            friendId: member.id,
+            friendName: memberName,
+            isMe: member.isMe,
+            gameId: docSnap.id,
+            gameTitle: data.title,
+            isDropped: true,
+            rating: 0,
+            dateFinished: dateDrop || 'Recente',
+            imageUrl: data.imageUrl,
+            review: data.dropReason || data.review || '',
+            dropReason: data.dropReason || data.review || '',
+            playtime: data.playtime,
+            genre: data.genre,
+            themeUrl: data.themeUrl,
+            screenshots: data.screenshots || []
+          });
+        } else if (isCompleted) {
           const rating = parseFloat(data.rating) || 0;
           const playtime = parseFloat(data.playtime) || 0;
           const dateFin = data.dateFinished || (data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : '');
@@ -139,6 +178,7 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
             isMe: member.isMe,
             gameId: docSnap.id,
             gameTitle: data.title,
+            isDropped: false,
             rating: data.rating,
             dateFinished: dateFin || 'Recente',
             imageUrl: data.imageUrl,

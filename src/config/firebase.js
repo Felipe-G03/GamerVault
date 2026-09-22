@@ -44,17 +44,4 @@ if (initialConfig && initialConfig.apiKey) {
   }
 }
 
-export function saveFirebaseConfig(newConfig) {
-  try {
-    localStorage.setItem('gamervault_firebase_config', JSON.stringify(newConfig));
-    app = initializeApp(newConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    return { success: true };
-  } catch (err) {
-    console.error('Erro ao inicializar Firebase:', err);
-    return { success: false, error: err.message };
-  }
-}
-
 export { app, auth, db };

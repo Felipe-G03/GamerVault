@@ -12,18 +12,19 @@ import {
   Star,
   Bookmark,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Ban
 } from 'lucide-react';
 import GameCard from './GameCard';
 import GameExpandedModal from './GameExpandedModal';
-import { isWishlist, isFinished } from '../../utils/gameUtils';
+import { isWishlist, isFinished, isDropped } from '../../utils/gameUtils';
 
-export { isWishlist, isFinished };
+export { isWishlist, isFinished, isDropped };
 
 export default function VaultView({ games = [], onAddGameClick, onEditGame, onDeleteGame }) {
   const [selectedGame, setSelectedGame] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Finalizado'); // 'Finalizado', 'Desejo', 'Todos'
+  const [statusFilter, setStatusFilter] = useState('Finalizado'); // 'Finalizado', 'Desejo', 'Dropado', 'Todos'
   const [sortBy, setSortBy] = useState('dateFinished'); // 'dateFinished' como padrão, 'rating', 'playtime', 'title'
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' ou 'desc'
   const [collapsedYears, setCollapsedYears] = useState({});
@@ -31,11 +32,15 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
   const filterOptions = [
     { id: 'Finalizado', label: 'Finalizados' },
     { id: 'Desejo', label: 'Lista de Desejos' },
+    { id: 'Dropado', label: 'Dropados' },
     { id: 'Todos', label: 'Todos os Jogos' }
   ];
 
   // Extrai o ano ou categoria do jogo
   const getGameCategory = (game) => {
+    if (isDropped(game.status)) {
+      return 'Dropados / Abandonados';
+    }
     if (isWishlist(game.status)) {
       return 'Lista de Desejos';
     }
@@ -57,6 +62,8 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
         matchesStatus = isFinished(game.status);
       } else if (statusFilter === 'Desejo') {
         matchesStatus = isWishlist(game.status);
+      } else if (statusFilter === 'Dropado') {
+        matchesStatus = isDropped(game.status);
       }
 
       const matchesSearch =
@@ -166,6 +173,8 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
     return Object.values(groups).sort((a, b) => {
       if (a.category === 'Lista de Desejos') return -1;
       if (b.category === 'Lista de Desejos') return 1;
+      if (a.category === 'Dropados / Abandonados') return 1;
+      if (b.category === 'Dropados / Abandonados') return -1;
       if (a.category === 'Sem Ano Definido') return 1;
       if (b.category === 'Sem Ano Definido') return -1;
       return sortOrder === 'desc'
@@ -214,29 +223,28 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
 
   const getSortLabel = () => {
     switch (sortBy) {
-      case 'rating': return 'Nota';
-      case 'dateFinished': return 'Data de Conclusão';
+      case 'rating': return 'Nota Pessoal';
       case 'playtime': return 'Tempo de Jogo';
-      case 'title': return 'Título';
+      case 'title': return 'Título (A-Z)';
       case 'metacritic': return 'Metacritic';
-      default: return 'Nota';
+      default: return 'Data';
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Barra de Filtros e Ordenação Superior */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-3 sm:p-4 rounded-xl bg-surface-container/80 border border-border shadow-sm">
-        {/* Status Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+      {/* Barra de Filtros de Status, Busca e Ordenação */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Filtro de Status em Abas */}
+        <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl border border-border overflow-x-auto">
           {filterOptions.map(opt => (
             <button
               key={opt.id}
               onClick={() => setStatusFilter(opt.id)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                 statusFilter === opt.id
-                  ? 'bg-accent/20 border border-accent/60 text-accent-bright shadow-sm'
-                  : 'bg-surface hover:bg-surface-high border border-border/80 text-gray-400 hover:text-gray-200'
+                  ? 'bg-surface-high text-white shadow-sm border border-border-bright'
+                  : 'text-gray-400 hover:text-white hover:bg-surface'
               }`}
             >
               {opt.label}
@@ -292,7 +300,7 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
         </div>
       </div>
 
-      {/* Exibição em Coleções Separadas por Ano / Desejos (quando ordenar por Data) ou Lista Unificada */}
+      {/* Exibição em Coleções Separadas por Ano / Desejos / Dropados ou Lista Unificada */}
       {filteredGames.length > 0 ? (
         sortBy === 'dateFinished' ? (
           <div className="space-y-8">
@@ -300,6 +308,7 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
               const isCollapsed = collapsedYears[grp.category];
               const avgRating = grp.ratedCount > 0 ? (grp.totalScore / grp.ratedCount).toFixed(1) : '-';
               const isWishlistGroup = grp.category === 'Lista de Desejos';
+              const isDroppedGroup = grp.category === 'Dropados / Abandonados';
 
               return (
                 <section key={grp.category} className="space-y-4">
@@ -309,7 +318,9 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
                     className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer select-none transition-all shadow-sm group ${
                       isWishlistGroup
                         ? 'bg-gradient-to-r from-cyan-950/20 via-surface-container to-surface border-cyan-700/50 hover:border-cyan-400'
-                        : 'bg-gradient-to-r from-surface-high via-surface-container to-surface border-border/90 hover:border-accent/50'
+                        : isDroppedGroup
+                          ? 'bg-gradient-to-r from-amber-950/20 via-surface-container to-surface border-amber-800/50 hover:border-amber-500'
+                          : 'bg-gradient-to-r from-surface-high via-surface-container to-surface border-border/90 hover:border-accent/50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -317,7 +328,9 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
                         className={`w-2 h-7 rounded-full shadow-md ${
                           isWishlistGroup
                             ? 'bg-cyan-400 shadow-[0_0_10px_#06b6d4]'
-                            : 'bg-accent-bright shadow-[0_0_10px_#3dd69b]'
+                            : isDroppedGroup
+                              ? 'bg-amber-500 shadow-[0_0_10px_#f59e0b]'
+                              : 'bg-accent-bright shadow-[0_0_10px_#3dd69b]'
                         }`}
                       ></div>
                       <div>
@@ -326,6 +339,11 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
                             <span className="flex items-center gap-1.5 text-cyan-300">
                               <Bookmark className="w-4 h-4 fill-current" />
                               Lista de Desejos (Quero Jogar)
+                            </span>
+                          ) : isDroppedGroup ? (
+                            <span className="flex items-center gap-1.5 text-amber-300">
+                              <Ban className="w-4 h-4" />
+                              Dropados / Abandonados
                             </span>
                           ) : grp.category !== 'Sem Ano Definido' ? (
                             <span>Coleção {grp.category}</span>
@@ -341,17 +359,28 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
 
                     {/* Resumo Métricas do Grupo & Botão Recolher */}
                     <div className="flex items-center gap-4 text-xs font-mono text-gray-400">
-                      {!isWishlistGroup && grp.totalHours > 0 && (
-                        <span className="hidden sm:inline-flex items-center gap-1 text-amber-400">
-                          <Clock className="w-3.5 h-3.5" />
-                          {grp.totalHours}h
-                        </span>
-                      )}
-                      {!isWishlistGroup && avgRating !== '-' && (
-                        <span className="hidden sm:inline-flex items-center gap-1 text-emerald-400">
-                          <Star className="w-3.5 h-3.5 fill-current" />
-                          {avgRating} média
-                        </span>
+                      {isDroppedGroup ? (
+                        grp.totalHours > 0 && (
+                          <span className="hidden sm:inline-flex items-center gap-1 text-amber-400">
+                            <Clock className="w-3.5 h-3.5" />
+                            {grp.totalHours}h investidas antes de dropar
+                          </span>
+                        )
+                      ) : (
+                        <>
+                          {!isWishlistGroup && grp.totalHours > 0 && (
+                            <span className="hidden sm:inline-flex items-center gap-1 text-amber-400">
+                              <Clock className="w-3.5 h-3.5" />
+                              {grp.totalHours}h
+                            </span>
+                          )}
+                          {!isWishlistGroup && avgRating !== '-' && (
+                            <span className="hidden sm:inline-flex items-center gap-1 text-emerald-400">
+                              <Star className="w-3.5 h-3.5 fill-current" />
+                              {avgRating} média
+                            </span>
+                          )}
+                        </>
                       )}
                       <button className="p-1 rounded hover:bg-surface text-gray-400 group-hover:text-white transition-colors">
                         {isCollapsed ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
@@ -388,7 +417,9 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
                         ? 'Jogos Finalizados'
                         : statusFilter === 'Desejo'
                           ? 'Lista de Desejos'
-                          : 'Todos os Jogos'}
+                          : statusFilter === 'Dropado'
+                            ? 'Jogos Dropados / Abandonados'
+                            : 'Todos os Jogos'}
                     </span>
                     <span className="text-xs font-mono font-normal text-gray-400 bg-surface px-2 py-0.5 rounded border border-border">
                       {sortedUnifiedGames.length} {sortedUnifiedGames.length === 1 ? 'jogo' : 'jogos'}

@@ -8,10 +8,6 @@ export function getRawgApiKey() {
   return localStorage.getItem('gamervault_rawg_key') || '';
 }
 
-export function saveRawgApiKey(key) {
-  localStorage.setItem('gamervault_rawg_key', key.trim());
-}
-
 export async function searchRawgGames(query, page = 1) {
   const key = getRawgApiKey();
   if (!key) {

@@ -10,13 +10,17 @@ import {
   Edit3,
   Image as ImageIcon,
   Tag,
-  Maximize2
+  Maximize2,
+  Ban,
+  Trophy
 } from 'lucide-react';
 import YouTubeThemePlayer from '../common/YouTubeThemePlayer';
 import { parseScreenshotUrls } from '../../services/driveUtils';
 import { searchGameTheme } from '../../services/youtubeService';
+import { isDropped } from '../../utils/gameUtils';
 
 export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
+  const isDrop = isDropped(game?.status);
   const [selectedScreenshot, setSelectedScreenshot] = useState(null);
   const [dominantColor, setDominantColor] = useState('61, 214, 155'); // Padrão verde neon
   const [activeThemeUrl, setActiveThemeUrl] = useState(game?.themeUrl || null);
@@ -199,17 +203,24 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           <div className="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span
-                  className="px-2.5 py-0.5 rounded-full text-xs font-semibold backdrop-blur-md"
-                  style={{
-                    backgroundColor: `rgba(${dominantColor}, 0.25)`,
-                    borderColor: `rgba(${dominantColor}, 0.5)`,
-                    borderWidth: '1px',
-                    color: '#ffffff'
-                  }}
-                >
-                  {game.status || 'Finalizado'}
-                </span>
+                {isDrop ? (
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-950/80 border border-amber-500/70 text-amber-300 backdrop-blur-md shadow-sm">
+                    <Ban className="w-3.5 h-3.5 text-amber-400" />
+                    DROPADO / ABANDONADO
+                  </span>
+                ) : (
+                  <span
+                    className="px-2.5 py-0.5 rounded-full text-xs font-semibold backdrop-blur-md"
+                    style={{
+                      backgroundColor: `rgba(${dominantColor}, 0.25)`,
+                      borderColor: `rgba(${dominantColor}, 0.5)`,
+                      borderWidth: '1px',
+                      color: '#ffffff'
+                    }}
+                  >
+                    {game.status || 'Finalizado'}
+                  </span>
+                )}
                 {game.genre && (
                   <span className="text-xs text-gray-200 font-mono drop-shadow">
                     {game.genre}
@@ -221,8 +232,8 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
               </h2>
             </div>
 
-            {/* Badge de Nota em Destaque */}
-            {game.rating > 0 && (
+            {/* Badge de Nota em Destaque (apenas se não for dropado) */}
+            {!isDrop && game.rating > 0 && (
               <div className="flex items-center gap-3">
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] font-mono uppercase text-gray-300 drop-shadow">Sua Nota</span>
@@ -251,7 +262,9 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
             <div className="p-3 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center gap-3">
               <Clock className="w-5 h-5 text-amber-500" />
               <div>
-                <span className="text-[10px] font-mono uppercase text-gray-400">Tempo Jogado</span>
+                <span className="text-[10px] font-mono uppercase text-gray-400">
+                  {isDrop ? 'Jogado até o drop' : 'Tempo Jogado'}
+                </span>
                 <p className="text-sm font-bold text-white">{game.playtime ? `${game.playtime} horas` : 'Não registrado'}</p>
               </div>
             </div>
@@ -259,8 +272,10 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
             <div className="p-3 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md flex items-center gap-3">
               <Calendar className="w-5 h-5 text-cyan-400" />
               <div>
-                <span className="text-[10px] font-mono uppercase text-gray-400">Data de Conclusão</span>
-                <p className="text-sm font-bold text-white">{game.dateFinished || 'Em andamento'}</p>
+                <span className="text-[10px] font-mono uppercase text-gray-400">
+                  {isDrop ? 'Data do Drop' : 'Data de Conclusão'}
+                </span>
+                <p className="text-sm font-bold text-white">{game.dateFinished || (isDrop ? 'Data não informada' : 'Em andamento')}</p>
               </div>
             </div>
 
@@ -281,25 +296,43 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
             </div>
           </div>
 
-          {/* Análise / Review Crítica */}
-          <div className="p-5 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md">
-            <h4
-              className="text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 font-semibold"
-              style={{ color: `rgb(${dominantColor})` }}
-            >
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: `rgb(${dominantColor})` }}></span>
-              Sua Análise Crítica
-            </h4>
-            {game.review && game.review.trim() ? (
-              <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-line">
-                {game.review}
-              </p>
-            ) : (
-              <p className="text-xs text-gray-500 italic">
-                Nenhuma análise escrita para este jogo ainda.
-              </p>
-            )}
-          </div>
+          {/* Análise / Motivo do Drop */}
+          {isDrop ? (
+            <div className="p-5 rounded-xl bg-amber-950/20 border border-amber-800/40 backdrop-blur-md">
+              <h4 className="text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 font-semibold text-amber-400">
+                <Ban className="w-4 h-4 text-amber-400" />
+                Motivo do Abandono / Por que Dropou
+              </h4>
+              {game.dropReason || game.review ? (
+                <p className="text-sm text-amber-200/90 leading-relaxed whitespace-pre-line">
+                  {game.dropReason || game.review}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 italic">
+                  Nenhum motivo detalhado informado.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="p-5 rounded-xl bg-black/40 border border-white/10 backdrop-blur-md">
+              <h4
+                className="text-xs font-mono uppercase tracking-wider mb-2 flex items-center gap-2 font-semibold"
+                style={{ color: `rgb(${dominantColor})` }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: `rgb(${dominantColor})` }}></span>
+                Sua Análise Crítica
+              </h4>
+              {game.review && game.review.trim() ? (
+                <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-line">
+                  {game.review}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 italic">
+                  Nenhuma análise escrita para este jogo ainda.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Galeria de Screenshots */}
           {screenshotsList.length > 0 && (
@@ -347,7 +380,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
             </div>
           )}
 
-          {/* Rodapé de Ações (Editar e Deletar) */}
+          {/* Rodapé de Ações (Editar, Finalizar e Deletar) */}
           <div className="flex items-center justify-between pt-4 border-t border-white/10">
             <button
               onClick={() => {
@@ -362,16 +395,36 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
               <span>Excluir do Vault</span>
             </button>
 
-            <button
-              onClick={() => {
-                onClose();
-                onEdit(game);
-              }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold transition-colors backdrop-blur-md"
-            >
-              <Edit3 className="w-4 h-4" />
-              <span>Editar Detalhes</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {isDrop && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onEdit({
+                      ...game,
+                      status: 'Finalizado',
+                      rating: 8,
+                      dateFinished: new Date().toISOString().split('T')[0]
+                    });
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] active:scale-95"
+                >
+                  <Trophy className="w-4 h-4" />
+                  <span>Finalizei esse jogo!</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  onClose();
+                  onEdit(game);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold transition-colors backdrop-blur-md"
+              >
+                <Edit3 className="w-4 h-4" />
+                <span>Editar Detalhes</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
