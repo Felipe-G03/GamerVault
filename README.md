@@ -54,7 +54,6 @@ Além das ferramentas principais, o aplicativo conta com pequenos toques pensado
 * **Música Ambiente Personalizável:** Player de áudio embutido que toca faixas com transição suave e notificação discreta no canto da tela. Você pode colocar as suas próprias músicas favoritas em formato `.mp3` na pasta `public/bgm/`.
 * **Tema Musical Individual do Jogo:** Cada ficha de jogo pode ter sua música tema oficial vinculada (via YouTube ou áudio), pausando a música ambiente automaticamente enquanto você escuta.
 * **6 Opções de Temas Visuais:** Escolha entre cores diferentes para combinar com o seu estilo (Midnight Violet, Cyber Emerald, Electric Cyan, Solar Amber, Synthwave Void e Blood Crimson).
-* **Configuração Fácil pela Própria Tela:** Todas as chaves de integração podem ser preenchidas direto no menu de Configurações do app, sem precisar mexer em linhas de código.
 
 ---
 
@@ -101,7 +100,7 @@ Para que o aplicativo funcione com seus próprios dados e buscas, você pode obt
 2. **RAWG API:** Crie uma conta gratuita em [RAWG.io](https://rawg.io/apidocs) e gere sua API Key para busca de jogos.
 3. **YouTube Data API v3:** No Google Cloud Console, ative a YouTube Data API v3 e crie uma chave de API para carregar trailers.
 
-Você pode colar essas chaves diretamente na janela de **Configurações** do aplicativo (no ícone de engrenagem) ou criar um arquivo `.env` na raiz do projeto com base no modelo `.env.example`:
+Crie um arquivo `.env` na raiz do projeto com base no modelo `.env.example`:
 
 ```env
 VITE_FIREBASE_API_KEY=sua_chave
