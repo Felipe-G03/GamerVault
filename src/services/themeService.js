@@ -176,8 +176,14 @@ export function getSavedTheme() {
 }
 
 export function applyTheme(themeId) {
-  const theme = THEMES[themeId] || THEMES.emerald;
+  const currentThemeId = themeId || getSavedTheme();
+  const theme = THEMES[currentThemeId] || THEMES.emerald;
   const root = document.documentElement;
+
+  // Limpa qualquer resquício de light mode se houver no localStorage
+  try {
+    localStorage.removeItem('gamervault_app_mode');
+  } catch (e) {}
 
   // Aplica as variáveis CSS
   Object.entries(theme.vars).forEach(([prop, val]) => {
@@ -185,6 +191,9 @@ export function applyTheme(themeId) {
   });
 
   root.setAttribute('data-theme', theme.id);
+  root.removeAttribute('data-theme-mode');
+  root.classList.remove('light');
+  root.classList.add('dark');
 
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme.id);
@@ -192,5 +201,12 @@ export function applyTheme(themeId) {
     // LocalStorage indisponível
   }
 
-  return theme.id;
+  // Notifica componentes sobre a mudança de paleta
+  window.dispatchEvent(
+    new CustomEvent('gamervault:theme-changed', {
+      detail: { themeId: theme.id }
+    })
+  );
+
+  return { themeId: theme.id };
 }

@@ -226,7 +226,7 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
   return (
     <div className="space-y-6">
       {/* Barra de Filtros e Ordenação Superior */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-3 sm:p-4 rounded-xl bg-[#0f1118] border border-border">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-3 sm:p-4 rounded-xl bg-surface-container/80 border border-border shadow-sm">
         {/* Status Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
           {filterOptions.map(opt => (
@@ -266,11 +266,11 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
               onChange={e => setSortBy(e.target.value)}
               className="bg-transparent text-xs text-white focus:outline-none cursor-pointer font-medium"
             >
-              <option value="dateFinished" className="bg-[#10121a]">Data</option>
-              <option value="rating" className="bg-[#10121a]">Nota</option>
-              <option value="playtime" className="bg-[#10121a]">Tempo de Jogo</option>
-              <option value="title" className="bg-[#10121a]">Título (A-Z)</option>
-              <option value="metacritic" className="bg-[#10121a]">Metacritic</option>
+              <option value="dateFinished" className="bg-surface text-gray-200">Data</option>
+              <option value="rating" className="bg-surface text-gray-200">Nota</option>
+              <option value="playtime" className="bg-surface text-gray-200">Tempo de Jogo</option>
+              <option value="title" className="bg-surface text-gray-200">Título (A-Z)</option>
+              <option value="metacritic" className="bg-surface text-gray-200">Metacritic</option>
             </select>
             <button
               onClick={toggleSortOrder}
@@ -306,10 +306,10 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
                   {/* Header da Coleção */}
                   <div
                     onClick={() => toggleYearCollapse(grp.category)}
-                    className={`flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r border cursor-pointer select-none transition-all shadow-sm group ${
+                    className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer select-none transition-all shadow-sm group ${
                       isWishlistGroup
-                        ? 'from-[#141b22] via-[#0f141a] to-transparent border-cyan-700/60 hover:border-cyan-400'
-                        : 'from-[#141622] via-[#0f111a] to-transparent border-border/90 hover:border-accent/50'
+                        ? 'bg-gradient-to-r from-cyan-950/20 via-surface-container to-surface border-cyan-700/50 hover:border-cyan-400'
+                        : 'bg-gradient-to-r from-surface-high via-surface-container to-surface border-border/90 hover:border-accent/50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -378,7 +378,7 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
         ) : (
           <section className="space-y-4">
             {/* Header Unificado com Ordenação Global */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-[#141622] via-[#0f111a] to-transparent border border-border/90 shadow-sm">
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-surface-high via-surface-container to-surface border border-border/90 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-7 rounded-full bg-accent-bright shadow-[0_0_10px_#3dd69b]"></div>
                 <div>

@@ -347,7 +347,7 @@ export default function BgmPlayer() {
               onMouseEnter={handleVolumeMouseEnter}
               onMouseLeave={handleVolumeMouseLeave}
             >
-              <div className="p-2 rounded-lg bg-[#12151f] border border-border/90 shadow-2xl flex items-center gap-2 backdrop-blur-xl">
+              <div className="p-2 rounded-lg bg-surface border border-border shadow-2xl flex items-center gap-2 backdrop-blur-xl">
                 <input
                   type="range"
                   min="0"

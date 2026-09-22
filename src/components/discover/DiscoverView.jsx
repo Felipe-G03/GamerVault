@@ -16,10 +16,12 @@ import {
   Gamepad2,
   ShieldCheck,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { getRawgDiscoverGames, getRawgApiKey } from '../../config/rawg';
 import { isWishlist, isFinished } from '../vault/VaultView';
+import DiscoverGameModal from './DiscoverGameModal';
 
 // Cache em memória durante a sessão para evitar requisições repetidas
 const DISCOVER_CACHE = new Map();
@@ -68,6 +70,7 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState(null);
   const [addingId, setAddingId] = useState(null);
+  const [selectedGameForModal, setSelectedGameForModal] = useState(null);
 
   // Mapeia os títulos dos jogos do usuário para busca rápida O(1)
   const userGamesMap = useMemo(() => {
@@ -400,7 +403,8 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
             return (
               <div
                 key={game.id}
-                className={`group relative flex flex-col rounded-xl overflow-hidden bg-surface border transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1 ${
+                onClick={() => setSelectedGameForModal(game)}
+                className={`group relative flex flex-col rounded-xl overflow-hidden bg-surface border transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1 cursor-pointer select-none ${
                   finished
                     ? 'border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.15)] hover:border-amber-400'
                     : inWishlist
@@ -425,6 +429,14 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
 
                   {/* Gradiente de sombra */}
                   <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-black/40 pointer-events-none" />
+
+                  {/* Overlay sutil de clique para prévia */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/80 border border-accent-bright/60 text-accent-bright text-xs font-semibold backdrop-blur-md shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                      <Info className="w-3.5 h-3.5" />
+                      <span>Ver Detalhes & Trailer</span>
+                    </span>
+                  </div>
 
                   {/* Posição no Topo: Rank numérico no Top 250 ou Metacritic */}
                   <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5">
@@ -511,9 +523,12 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
                       <>
                         {/* Botão de 1 Clique: Salvar em Desejos */}
                         <button
-                          onClick={() => handleQuickAddWishlist(game)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuickAddWishlist(game);
+                          }}
                           disabled={isBeingAdded}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-surface-high hover:bg-cyan-950/40 text-gray-300 hover:text-cyan-300 border border-border hover:border-cyan-500/50 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50"
+                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-surface-high hover:bg-cyan-950/40 text-gray-300 hover:text-cyan-300 border border-border hover:border-cyan-500/50 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                           title="Salvar na sua Lista de Desejos com 1 clique"
                         >
                           {isBeingAdded ? (
@@ -526,8 +541,11 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
 
                         {/* Botão de Registrar Completo */}
                         <button
-                          onClick={() => onSelectGameToRegister(game)}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-accent-bright/15 hover:bg-accent-bright/25 text-accent-bright border border-accent-bright/40 text-xs font-semibold transition-all active:scale-95"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectGameToRegister(game);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-accent-bright/15 hover:bg-accent-bright/25 text-accent-bright border border-accent-bright/40 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
                           title="Abrir formulário completo para registrar"
                         >
                           <Plus className="w-3 h-3" />
@@ -584,6 +602,24 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
         </div>
+      )}
+
+      {/* Modal Rico de Detalhes da Sugestão (Sob Demanda) */}
+      {selectedGameForModal && (
+        <DiscoverGameModal
+          game={selectedGameForModal}
+          isOwned={Boolean(
+            userGamesMap.get(selectedGameForModal.title?.toLowerCase().trim()) &&
+            isFinished(userGamesMap.get(selectedGameForModal.title?.toLowerCase().trim())?.status)
+          )}
+          isWishlist={Boolean(
+            userGamesMap.get(selectedGameForModal.title?.toLowerCase().trim()) &&
+            isWishlist(userGamesMap.get(selectedGameForModal.title?.toLowerCase().trim())?.status)
+          )}
+          onClose={() => setSelectedGameForModal(null)}
+          onAddToWishlist={handleQuickAddWishlist}
+          onRegisterFull={onSelectGameToRegister}
+        />
       )}
     </div>
   );

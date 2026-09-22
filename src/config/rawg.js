@@ -118,8 +118,32 @@ export async function getRawgDiscoverGames(category = 'best_year', { year = new 
       tags: (g.tags || []).slice(0, 30).map(t => t.slug),
       rating: g.rating || 0,
       playtime: g.playtime || 0,
-      added: g.added || 0
+      added: g.added || 0,
+      platforms: (g.platforms || []).map(p => p.platform?.name).filter(Boolean).join(', '),
+      screenshots: (g.short_screenshots || []).map(s => s.image).filter(Boolean)
     }))
   };
+}
+
+/**
+ * Busca trailers oficiais de um jogo fornecidos na base do RAWG (sem consumir YouTube API)
+ * @param {number|string} id 
+ * @returns {Promise<Array<{ id: number, name: string, preview: string, data: { 480: string, max: string } }>>}
+ */
+export async function getRawgGameTrailers(id) {
+  const key = getRawgApiKey();
+  if (!key || !id) return [];
+
+  try {
+    const url = `https://api.rawg.io/api/games/${id}/movies?key=${key}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    return data.results || [];
+  } catch (e) {
+    console.warn('Erro ao buscar trailers no RAWG:', e);
+    return [];
+  }
 }
 

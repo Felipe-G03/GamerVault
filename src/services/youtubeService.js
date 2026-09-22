@@ -78,3 +78,74 @@ export async function searchGameTheme(gameTitle) {
     return null;
   }
 }
+
+const TRAILER_CACHE_KEY = 'gamervault_yt_trailers_cache';
+
+function getTrailerCache() {
+  try {
+    const raw = localStorage.getItem(TRAILER_CACHE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveTrailerCache(titleKey, url) {
+  try {
+    const cache = getTrailerCache();
+    cache[titleKey.toLowerCase().trim()] = url;
+    localStorage.setItem(TRAILER_CACHE_KEY, JSON.stringify(cache));
+  } catch (e) {
+    console.warn('Erro ao salvar trailer no cache local:', e);
+  }
+}
+
+/**
+ * Busca o trailer oficial do jogo no YouTube sob demanda com economia estrita de cota
+ * @param {string} gameTitle - Nome do jogo
+ * @returns {Promise<string|null>} - Link do trailer no YouTube ou null
+ */
+export async function searchGameTrailer(gameTitle) {
+  if (!gameTitle || typeof gameTitle !== 'string') return null;
+
+  const normalizedTitle = gameTitle.trim().toLowerCase();
+
+  // 1. Tenta recuperar do cache local primeiro
+  const cache = getTrailerCache();
+  if (cache[normalizedTitle]) {
+    return cache[normalizedTitle];
+  }
+
+  // 2. Se não houver chave configurada, retorna null
+  if (!YOUTUBE_API_KEY) {
+    return null;
+  }
+
+  try {
+    const query = `${gameTitle} official game trailer`;
+    const endpoint = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(
+      query
+    )}&type=video&videoEmbeddable=true&maxResults=1&key=${YOUTUBE_API_KEY}`;
+
+    const response = await fetch(endpoint);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    const items = data.items || [];
+
+    if (items.length > 0 && items[0].id?.videoId) {
+      const videoId = items[0].id.videoId;
+      const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      saveTrailerCache(normalizedTitle, videoUrl);
+      return videoUrl;
+    }
+
+    return null;
+  } catch (error) {
+    console.warn('Falha ao buscar trailer no YouTube:', error);
+    return null;
+  }
+}
