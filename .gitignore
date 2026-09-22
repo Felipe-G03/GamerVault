@@ -27,3 +27,8 @@ dist-ssr
 # Environment variables
 .env
 .env.production
+firebase-service-account.json
+
+# Audio files (direitos autorais)
+public/bgm/*.mp3
+!public/bgm/.gitkeep
