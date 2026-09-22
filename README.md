@@ -12,7 +12,7 @@
 
 ---
 
-## O Propósito: Por que criamos o Gamer's Vault?
+## O Propósito: Por que criar o Gamer's Vault?
 
 A rotina da maioria das pessoas hoje é acelerada e cansativa. Depois de passar o dia trabalhando, estudando e resolvendo pendências, o momento do descanso muitas vezes acaba virando outra fonte de frustração. Quem nunca sentou na frente do computador com uma biblioteca cheia de opções na Steam, Game Pass ou PlayStation, abriu a lista de jogos, ficou olhando a tela por vinte minutos e acabou fechando tudo sem jogar nada?
 
