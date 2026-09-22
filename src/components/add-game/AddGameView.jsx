@@ -16,6 +16,7 @@ import { searchRawgGames, getRawgApiKey } from '../../config/rawg';
 import { parseScreenshotUrls } from '../../services/driveUtils';
 import { searchGameTheme } from '../../services/youtubeService';
 import RatingCalculator from './RatingCalculator';
+import { isWishlist } from '../../utils/gameUtils';
 
 export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) {
   const [step, setStep] = useState(editingGame ? 2 : 1);
@@ -134,13 +135,16 @@ export default function AddGameView({ onGameAdded, editingGame, onCancelEdit }) 
     e.preventDefault();
     setIsSaving(true);
     try {
+      const isWish = isWishlist(selectedGame.status);
+      const isFin = selectedGame.status === 'Finalizado';
+
       const gamePayload = {
         title: selectedGame.title,
         status: selectedGame.status,
-        rating: Number(selectedGame.rating) || 0,
-        playtime: String(selectedGame.playtime || '0'),
-        dateFinished: selectedGame.dateFinished || '',
-        review: selectedGame.review || '',
+        rating: isWish ? 0 : (Number(selectedGame.rating) || 0),
+        playtime: isWish ? '0' : String(selectedGame.playtime || '0'),
+        dateFinished: isWish ? '' : (selectedGame.dateFinished || (isFin ? new Date().toISOString().split('T')[0] : '')),
+        review: isWish ? '' : (selectedGame.review || ''),
         imageUrl: selectedGame.imageUrl || '',
         metacritic: selectedGame.metacritic ? Number(selectedGame.metacritic) : null,
         genre: selectedGame.genre || '',

@@ -9,6 +9,7 @@ import {
   BarChart2,
   Flame
 } from 'lucide-react';
+import { isWishlist, isFinished } from '../../utils/gameUtils';
 
 export default function StatsView({ games = [] }) {
   const stats = useMemo(() => {
@@ -23,18 +24,23 @@ export default function StatsView({ games = [] }) {
     const genreCounts = {};
 
     games.forEach((g) => {
-      // Horas jogadas
-      const hours = parseFloat(g.playtime) || 0;
-      totalHours += hours;
+      const isWish = isWishlist(g.status);
+      const isFin = isFinished(g.status, g.dateFinished);
+
+      // Horas jogadas (não contabiliza desejos/backlog)
+      if (!isWish) {
+        const hours = parseFloat(g.playtime) || 0;
+        totalHours += hours;
+      }
 
       // Status
-      if (g.status === 'Finalizado') finishedCount++;
-      else if (g.status === 'Quero Jogar') wantToPlayCount++;
+      if (isWish) wantToPlayCount++;
       else if (g.status === 'Jogando') playingCount++;
+      else if (isFin) finishedCount++;
 
-      // Notas
+      // Notas (apenas jogos realmente jogados/finalizados)
       const rating = parseFloat(g.rating) || 0;
-      if (rating > 0) {
+      if (!isWish && rating > 0) {
         totalRatingSum += rating;
         ratedGamesCount++;
         if (!bestGame || rating > bestGame.rating) {

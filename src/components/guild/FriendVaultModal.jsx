@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Clock, Star, Gamepad2, Loader2, ArrowLeft } from 'lucide-react';
 import { getUserGames } from '../../services/gamesService';
 import GameExpandedModal from '../vault/GameExpandedModal';
+import { isWishlist, isFinished } from '../../utils/gameUtils';
 
 export default function FriendVaultModal({ friend, onClose }) {
   const [games, setGames] = useState([]);
@@ -45,7 +46,7 @@ export default function FriendVaultModal({ friend, onClose }) {
     load();
   }, [friend]);
 
-  const finishedGames = games.filter(g => g.status === 'Finalizado');
+  const finishedGames = games.filter(g => isFinished(g.status, g.dateFinished) && !isWishlist(g.status));
 
   if (typeof document === 'undefined') return null;
 

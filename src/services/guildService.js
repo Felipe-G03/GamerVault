@@ -1,5 +1,6 @@
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { isWishlist, isFinished } from '../utils/gameUtils';
 
 /**
  * Busca a atividade recente e calcula métricas consolidadas e comparativas da Guilda
@@ -57,8 +58,27 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
 
       gamesSnap.docs.forEach(docSnap => {
         const data = docSnap.data();
-        const statusLower = (data.status || '').toLowerCase();
-        const isCompleted = statusLower.includes('finalizado') || statusLower.includes('zerado') || data.dateFinished;
+        const statusLower = (data.status || '').toLowerCase().trim();
+        const isWish = isWishlist(data.status);
+
+        // Auto-limpeza silenciosa se for backlog com data residual
+        if (isWish && member.isMe && (data.dateFinished || data.rating > 0 || (data.playtime && data.playtime !== '0'))) {
+          updateDoc(doc(db, 'users', member.id, 'games', docSnap.id), {
+            dateFinished: '',
+            rating: 0,
+            playtime: '0'
+          }).catch(() => {});
+        }
+
+        // Jogo é concluído somente se NÃO for backlog/desejos, NÃO for 'jogando',
+        // e tiver status de finalizado/zerado ou for legado sem status mas com data
+        const isCompleted = !isWish && statusLower !== 'jogando' && (
+          isFinished(data.status) ||
+          statusLower.includes('finalizado') ||
+          statusLower.includes('zerado') ||
+          statusLower.includes('conclu') ||
+          (!data.status && Boolean(data.dateFinished))
+        );
 
         if (isCompleted) {
           const rating = parseFloat(data.rating) || 0;
@@ -156,6 +176,7 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
 
     return {
       ...m,
+      totalHours: Math.round(m.totalHours * 10) / 10,
       avgRating,
       avgHoursPerGame: Number(avgHoursPerGame),
       daysSinceLastGame

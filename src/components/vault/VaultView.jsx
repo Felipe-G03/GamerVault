@@ -16,18 +16,9 @@ import {
 } from 'lucide-react';
 import GameCard from './GameCard';
 import GameExpandedModal from './GameExpandedModal';
+import { isWishlist, isFinished } from '../../utils/gameUtils';
 
-export const isWishlist = (status) => {
-  if (!status) return false;
-  const s = String(status).toLowerCase();
-  return s.includes('desejo') || s.includes('quero') || s.includes('backlog');
-};
-
-export const isFinished = (status) => {
-  if (!status) return true;
-  const s = String(status).toLowerCase();
-  return s.includes('finalizado') || s.includes('zerado') || s.includes('conclu');
-};
+export { isWishlist, isFinished };
 
 export default function VaultView({ games = [], onAddGameClick, onEditGame, onDeleteGame }) {
   const [selectedGame, setSelectedGame] = useState(null);
