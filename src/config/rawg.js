@@ -31,7 +31,8 @@ export async function searchRawgGames(query, page = 1) {
     genres: (g.genres || []).map(genre => genre.name).join(', '),
     genre_slugs: (g.genres || []).map(genre => genre.slug),
     tags: (g.tags || []).slice(0, 30).map(t => t.slug),
-    rating: g.rating || 0
+    rating: g.rating || 0,
+    screenshots: (g.short_screenshots || []).map(s => s.image).filter(Boolean)
   }));
 }
 

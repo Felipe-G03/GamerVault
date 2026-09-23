@@ -14,7 +14,9 @@ import {
   Layers,
   Image as ImageIcon,
   Check,
-  Languages
+  Languages,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { getRawgGameDetails, getRawgGameTrailers } from '../../config/rawg';
 import { searchGameTrailer } from '../../services/youtubeService';
@@ -37,13 +39,28 @@ export default function DiscoverGameModal({
   const [trailerUrl, setTrailerUrl] = useState(null);
   const [nativeTrailer, setNativeTrailer] = useState(null);
   const [isLoadingTrailer, setIsLoadingTrailer] = useState(false);
-  const [selectedScreenshot, setSelectedScreenshot] = useState(null);
+  const [selectedScreenshotIndex, setSelectedScreenshotIndex] = useState(null);
   const [dominantColor, setDominantColor] = useState('61, 214, 155');
 
   // Estados de Tradução Automática da Sinopse (Gratuita)
   const [translatedDescription, setTranslatedDescription] = useState(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+
+  const screenshots = game?.screenshots || [];
+
+  // Navegação entre capturas de tela no Lightbox
+  const handlePrevScreenshot = (e) => {
+    if (e) e.stopPropagation();
+    if (selectedScreenshotIndex === null || screenshots.length === 0) return;
+    setSelectedScreenshotIndex((prev) => (prev > 0 ? prev - 1 : screenshots.length - 1));
+  };
+
+  const handleNextScreenshot = (e) => {
+    if (e) e.stopPropagation();
+    if (selectedScreenshotIndex === null || screenshots.length === 0) return;
+    setSelectedScreenshotIndex((prev) => (prev < screenshots.length - 1 ? prev + 1 : 0));
+  };
 
   // Trava scroll da página enquanto o modal estiver aberto
   useEffect(() => {
@@ -54,20 +71,27 @@ export default function DiscoverGameModal({
     };
   }, []);
 
-  // ESC para fechar modal ou screenshot
+  // ESC para fechar modal ou screenshot e Setas para navegar
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        if (selectedScreenshot) {
-          setSelectedScreenshot(null);
-        } else {
-          onClose();
+      if (selectedScreenshotIndex !== null) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handlePrevScreenshot();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleNextScreenshot();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          setSelectedScreenshotIndex(null);
         }
+      } else if (e.key === 'Escape') {
+        onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedScreenshot, onClose]);
+  }, [selectedScreenshotIndex, screenshots.length, onClose]);
 
   // Extração de cor dominante da imagem do jogo
   useEffect(() => {
@@ -155,25 +179,57 @@ export default function DiscoverGameModal({
     }
   };
 
+  // Função manual para tentar/forçar tradução
+  const handleTranslate = () => {
+    const rawDesc = details?.description;
+    if (!rawDesc) return;
+    setIsTranslating(true);
+    translateText(rawDesc, 'pt')
+      .then((translated) => {
+        if (translated && translated !== rawDesc) {
+          setTranslatedDescription(translated);
+          setShowOriginal(false);
+        } else {
+          setTranslatedDescription(null);
+        }
+      })
+      .catch((err) => {
+        console.warn('Erro ao traduzir sinopse:', err);
+        setTranslatedDescription(null);
+      })
+      .finally(() => {
+        setIsTranslating(false);
+      });
+  };
+
   // Tradução automática gratuita da sinopse para PT-BR
   useEffect(() => {
     const rawDesc = details?.description;
     if (!rawDesc) {
       setTranslatedDescription(null);
+      setShowOriginal(false);
       return;
     }
 
     let isMounted = true;
     setIsTranslating(true);
+    setTranslatedDescription(null);
+    setShowOriginal(false);
 
     translateText(rawDesc, 'pt')
       .then((translated) => {
         if (isMounted) {
-          setTranslatedDescription(translated);
+          if (translated && translated !== rawDesc) {
+            setTranslatedDescription(translated);
+            setShowOriginal(false);
+          } else {
+            setTranslatedDescription(null);
+          }
         }
       })
       .catch((err) => {
         console.warn('Erro ao traduzir sinopse:', err);
+        if (isMounted) setTranslatedDescription(null);
       })
       .finally(() => {
         if (isMounted) {
@@ -188,8 +244,6 @@ export default function DiscoverGameModal({
 
   if (!game) return null;
   if (typeof document === 'undefined') return null;
-
-  const screenshots = game.screenshots || [];
   const platforms = details?.platforms || game.platforms || '';
   const description = details?.description || '';
   const ytVideoId = trailerUrl ? extractYouTubeId(trailerUrl) : null;
@@ -212,23 +266,64 @@ export default function DiscoverGameModal({
         }}
       />
 
-      {/* Lightbox para Screenshot Expandida */}
-      {selectedScreenshot && (
+      {/* Lightbox para Screenshot Expandida com Navegação */}
+      {selectedScreenshotIndex !== null && screenshots[selectedScreenshotIndex] && (
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-4"
-          onClick={() => setSelectedScreenshot(null)}
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-4 sm:p-8 select-none animate-in fade-in duration-200"
+          onClick={() => setSelectedScreenshotIndex(null)}
         >
+          {/* Botão Fechar */}
           <button
-            className="absolute top-4 right-4 p-2 rounded-full bg-surface text-white hover:bg-surface-high transition-colors"
-            onClick={() => setSelectedScreenshot(null)}
+            type="button"
+            className="absolute top-4 right-4 p-2.5 rounded-full bg-surface-container/90 text-white hover:bg-surface-high hover:text-accent-bright transition-all border border-border shadow-xl z-30 cursor-pointer"
+            onClick={() => setSelectedScreenshotIndex(null)}
+            title="Fechar (Esc)"
           >
             <X className="w-6 h-6" />
           </button>
-          <img
-            src={selectedScreenshot}
-            alt="Screenshot expandida"
-            className="max-w-full max-h-[90vh] object-contain rounded-lg border border-border shadow-2xl"
-          />
+
+          {/* Contador de Imagens */}
+          {screenshots.length > 1 && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-surface-container/90 border border-border text-xs font-mono text-gray-200 backdrop-blur-md shadow-xl z-30">
+              {selectedScreenshotIndex + 1} / {screenshots.length}
+            </div>
+          )}
+
+          {/* Seta Esquerda (Anterior) */}
+          {screenshots.length > 1 && (
+            <button
+              type="button"
+              onClick={handlePrevScreenshot}
+              className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 p-3 sm:p-3.5 rounded-full bg-surface-container/90 hover:bg-surface-high text-white hover:text-accent-bright transition-all border border-border hover:border-accent-bright/50 shadow-2xl z-30 cursor-pointer group active:scale-95"
+              title="Foto anterior (Seta para a esquerda)"
+            >
+              <ChevronLeft className="w-6 h-6 group-hover:-translate-x-0.5 transition-transform" />
+            </button>
+          )}
+
+          {/* Imagem Central */}
+          <div
+            className="relative max-w-full max-h-[85vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={screenshots[selectedScreenshotIndex]}
+              alt={`Screenshot ${selectedScreenshotIndex + 1}`}
+              className="max-w-full max-h-[85vh] object-contain rounded-xl border border-border/80 shadow-[0_0_60px_rgba(0,0,0,0.95)] animate-in zoom-in-95 duration-200"
+            />
+          </div>
+
+          {/* Seta Direita (Próxima) */}
+          {screenshots.length > 1 && (
+            <button
+              type="button"
+              onClick={handleNextScreenshot}
+              className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 p-3 sm:p-3.5 rounded-full bg-surface-container/90 hover:bg-surface-high text-white hover:text-accent-bright transition-all border border-border hover:border-accent-bright/50 shadow-2xl z-30 cursor-pointer group active:scale-95"
+              title="Próxima foto (Seta para a direita)"
+            >
+              <ChevronRight className="w-6 h-6 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          )}
         </div>
       )}
 
@@ -352,7 +447,7 @@ export default function DiscoverGameModal({
                 <span>Sinopse & Visão Geral</span>
               </h3>
 
-              {/* Controles de Tradução (Português / Original) */}
+              {/* Controles de Tradução (Português / Original / Tentar Traduzir) */}
               {description && (
                 <div className="flex items-center gap-2">
                   {isTranslating ? (
@@ -367,10 +462,20 @@ export default function DiscoverGameModal({
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono bg-surface-high hover:bg-surface-higher border border-border/80 text-gray-300 hover:text-white transition-all active:scale-95 cursor-pointer shadow-sm"
                       title={showOriginal ? 'Voltar para a tradução em Português' : 'Ver o texto original no idioma original'}
                     >
-                      <Languages className="w-3 h-3 text-accent-bright" />
+                      <Languages className="w-3.5 h-3.5 text-accent-bright" />
                       <span>{showOriginal ? 'Ver em Português' : 'Ver Original'}</span>
                     </button>
-                  ) : null}
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleTranslate}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono bg-accent-bright/10 hover:bg-accent-bright/20 border border-accent-bright/40 text-accent-bright transition-all active:scale-95 cursor-pointer shadow-sm"
+                      title="Traduzir sinopse para o Português"
+                    >
+                      <Languages className="w-3.5 h-3.5" />
+                      <span>Traduzir p/ PT-BR</span>
+                    </button>
+                  )}
 
                   {translatedDescription && !showOriginal && (
                     <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-700/50 px-2 py-0.5 rounded-full hidden sm:inline">
@@ -472,7 +577,7 @@ export default function DiscoverGameModal({
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setSelectedScreenshot(shot)}
+                    onClick={() => setSelectedScreenshotIndex(idx)}
                     className="relative aspect-video rounded-lg overflow-hidden border border-border hover:border-accent-bright transition-all group cursor-pointer"
                   >
                     <img

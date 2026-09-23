@@ -8,6 +8,7 @@ import { checkAppUpdate } from './services/updateService';
 import TitleBar from './components/layout/TitleBar';
 import Navbar from './components/layout/Navbar';
 import VaultView from './components/vault/VaultView';
+import HubView from './components/hub/HubView';
 import AddGameView from './components/add-game/AddGameView';
 import GuildView from './components/guild/GuildView';
 import StatsView from './components/stats/StatsView';
@@ -186,6 +187,31 @@ export default function App() {
     setActiveTab('adicionar');
   };
 
+  // Handlers para o Gamer's Hub
+  const handleHubAddGame = async (gameData) => {
+    if (!user?.uid) return;
+    try {
+      const added = await addGame(user.uid, gameData);
+      setGames((prev) => [added, ...prev]);
+      return added;
+    } catch (e) {
+      console.error('Erro ao adicionar jogo via Hub:', e);
+      throw e;
+    }
+  };
+
+  const handleHubUpdateGame = async (gameId, gameData) => {
+    if (!user?.uid) return;
+    try {
+      const updated = await updateGame(user.uid, gameId, gameData);
+      setGames((prev) => prev.map((g) => (g.id === gameId ? { ...g, ...updated } : g)));
+      return updated;
+    } catch (e) {
+      console.error('Erro ao atualizar jogo via Hub:', e);
+      throw e;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-white flex flex-col selection:bg-accent-bright selection:text-black relative overflow-x-hidden">
       {/* Vídeo de Introdução / Splash Screen em Tela Cheia */}
@@ -256,6 +282,15 @@ export default function App() {
                     }}
                     onEditGame={handleEditGame}
                     onDeleteGame={handleDeleteGame}
+                  />
+                )}
+
+                {activeTab === 'hub' && (
+                  <HubView
+                    games={games}
+                    userId={user?.uid}
+                    onAddGame={handleHubAddGame}
+                    onUpdateGame={handleHubUpdateGame}
                   />
                 )}
 

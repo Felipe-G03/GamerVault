@@ -20,5 +20,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-download-ready', handler);
     return () => ipcRenderer.removeListener('update-download-ready', handler);
   },
+  // Game Hub API
+  selectDirectory: () => ipcRenderer.invoke('hub:select-directory'),
+  selectFile: (options) => ipcRenderer.invoke('hub:select-file', options),
+  readImageData: (filePath) => ipcRenderer.invoke('hub:read-image-data', filePath),
+  scanPlatform: (params) => ipcRenderer.invoke('hub:scan-platform', params),
+  launchGame: (params) => ipcRenderer.invoke('hub:launch-game', params),
   isElectron: true
 });

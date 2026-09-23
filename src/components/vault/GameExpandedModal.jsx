@@ -12,18 +12,39 @@ import {
   Tag,
   Maximize2,
   Ban,
-  Trophy
+  Trophy,
+  Palette,
+  Play,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import YouTubeThemePlayer from '../common/YouTubeThemePlayer';
+import GameMediaModal from '../common/GameMediaModal';
 import { parseScreenshotUrls } from '../../services/driveUtils';
 import { searchGameTheme } from '../../services/youtubeService';
 import { isDropped } from '../../utils/gameUtils';
+import PlatformIcon from '../common/PlatformIcon';
 
-export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
+export default function GameExpandedModal({ game, onClose, onEdit, onDelete, onLaunch, onFinish, onDrop }) {
   const isDrop = isDropped(game?.status);
-  const [selectedScreenshot, setSelectedScreenshot] = useState(null);
+  const [selectedScreenshotIndex, setSelectedScreenshotIndex] = useState(null);
   const [dominantColor, setDominantColor] = useState('61, 214, 155'); // Padrão verde neon
+  const [showMediaModal, setShowMediaModal] = useState(false);
   const [activeThemeUrl, setActiveThemeUrl] = useState(game?.themeUrl || null);
+
+  const screenshotsList = parseScreenshotUrls(game?.screenshots);
+
+  const handlePrevScreenshot = (e) => {
+    if (e) e.stopPropagation();
+    if (selectedScreenshotIndex === null || screenshotsList.length === 0) return;
+    setSelectedScreenshotIndex((prev) => (prev > 0 ? prev - 1 : screenshotsList.length - 1));
+  };
+
+  const handleNextScreenshot = (e) => {
+    if (e) e.stopPropagation();
+    if (selectedScreenshotIndex === null || screenshotsList.length === 0) return;
+    setSelectedScreenshotIndex((prev) => (prev < screenshotsList.length - 1 ? prev + 1 : 0));
+  };
 
   // Travar o scroll do body da página enquanto o modal estiver visível
   useEffect(() => {
@@ -34,20 +55,27 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
     };
   }, []);
 
-  // Tecla ESC para fechar o modal ou fechar screenshot expandida
+  // Tecla ESC e Setas para navegar no lightbox ou fechar modal
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        if (selectedScreenshot) {
-          setSelectedScreenshot(null);
-        } else {
-          onClose();
+      if (selectedScreenshotIndex !== null) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handlePrevScreenshot();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleNextScreenshot();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          setSelectedScreenshotIndex(null);
         }
+      } else if (e.key === 'Escape') {
+        onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedScreenshot, onClose]);
+  }, [selectedScreenshotIndex, screenshotsList.length, onClose]);
 
   // Busca automática da trilha sonora tema caso o jogo não possua link gravado
   useEffect(() => {
@@ -67,8 +95,6 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
 
   if (!game) return null;
   if (typeof document === 'undefined') return null;
-
-  const screenshotsList = parseScreenshotUrls(game.screenshots);
 
   // Extrai dinamicamente a cor predominante da capa do jogo
   useEffect(() => {
@@ -142,23 +168,64 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
         }}
       />
 
-      {/* Lightbox para Screenshot Expandida */}
-      {selectedScreenshot && (
+      {/* Lightbox para Screenshot Expandida com Navegação */}
+      {selectedScreenshotIndex !== null && screenshotsList[selectedScreenshotIndex] && (
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-4"
-          onClick={() => setSelectedScreenshot(null)}
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/95 p-4 sm:p-8 select-none animate-in fade-in duration-200"
+          onClick={() => setSelectedScreenshotIndex(null)}
         >
+          {/* Botão Fechar */}
           <button
-            className="absolute top-4 right-4 p-2 rounded-full bg-surface text-white hover:bg-surface-high transition-colors"
-            onClick={() => setSelectedScreenshot(null)}
+            type="button"
+            className="absolute top-4 right-4 p-2.5 rounded-full bg-surface text-white hover:bg-surface-high hover:text-accent-bright transition-all border border-white/20 shadow-xl z-30 cursor-pointer"
+            onClick={() => setSelectedScreenshotIndex(null)}
+            title="Fechar (Esc)"
           >
             <X className="w-6 h-6" />
           </button>
-          <img
-            src={selectedScreenshot}
-            alt="Screenshot expandida"
-            className="max-w-full max-h-[90vh] object-contain rounded-lg border border-border shadow-2xl"
-          />
+
+          {/* Contador de Imagens */}
+          {screenshotsList.length > 1 && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-black/70 border border-white/20 text-xs font-mono text-gray-200 backdrop-blur-md shadow-xl z-30">
+              {selectedScreenshotIndex + 1} / {screenshotsList.length}
+            </div>
+          )}
+
+          {/* Seta Esquerda (Anterior) */}
+          {screenshotsList.length > 1 && (
+            <button
+              type="button"
+              onClick={handlePrevScreenshot}
+              className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 p-3 sm:p-3.5 rounded-full bg-black/70 hover:bg-surface text-white hover:text-accent-bright transition-all border border-white/20 hover:border-accent-bright/50 shadow-2xl z-30 cursor-pointer group active:scale-95"
+              title="Foto anterior (Seta para a esquerda)"
+            >
+              <ChevronLeft className="w-6 h-6 group-hover:-translate-x-0.5 transition-transform" />
+            </button>
+          )}
+
+          {/* Imagem Central */}
+          <div
+            className="relative max-w-full max-h-[85vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={screenshotsList[selectedScreenshotIndex]}
+              alt={`Captura ${selectedScreenshotIndex + 1}`}
+              className="max-w-full max-h-[85vh] object-contain rounded-xl border border-white/20 shadow-[0_0_60px_rgba(0,0,0,0.95)] animate-in zoom-in-95 duration-200"
+            />
+          </div>
+
+          {/* Seta Direita (Próxima) */}
+          {screenshotsList.length > 1 && (
+            <button
+              type="button"
+              onClick={handleNextScreenshot}
+              className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 p-3 sm:p-3.5 rounded-full bg-black/70 hover:bg-surface text-white hover:text-accent-bright transition-all border border-white/20 hover:border-accent-bright/50 shadow-2xl z-30 cursor-pointer group active:scale-95"
+              title="Próxima foto (Seta para a direita)"
+            >
+              <ChevronRight className="w-6 h-6 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          )}
         </div>
       )}
 
@@ -202,7 +269,15 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           {/* Dados no topo do banner */}
           <div className="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                {game.platform && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 border border-white/20 backdrop-blur-md shadow-sm">
+                    <PlatformIcon platformId={game.platform} size="sm" />
+                    <span className="text-[11px] font-mono font-bold uppercase text-gray-200">
+                      {game.platform}
+                    </span>
+                  </div>
+                )}
                 {isDrop ? (
                   <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-950/80 border border-amber-500/70 text-amber-300 backdrop-blur-md shadow-sm">
                     <Ban className="w-3.5 h-3.5 text-amber-400" />
@@ -232,21 +307,35 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
               </h2>
             </div>
 
-            {/* Badge de Nota em Destaque (apenas se não for dropado) */}
-            {!isDrop && game.rating > 0 && (
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
+              {onLaunch && (game.launchTarget || game.platform) && (
+                <button
+                  onClick={() => {
+                    onLaunch(game);
+                    onClose();
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-accent-bright to-emerald-400 hover:from-accent-bright/90 hover:to-emerald-300 text-surface-low font-gamer font-extrabold text-xs sm:text-sm tracking-wider uppercase shadow-neon-green transition-all transform active:scale-95 hover:scale-105"
+                  title="Iniciar Jogo no PC"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>Jogar Agora</span>
+                </button>
+              )}
+
+              {/* Badge de Nota em Destaque (apenas se não for dropado) */}
+              {!isDrop && game.rating > 0 && (
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] font-mono uppercase text-gray-300 drop-shadow">Sua Nota</span>
                   <div
-                    className={`w-14 h-14 rounded-full flex items-center justify-center font-extrabold text-xl shadow-2xl ${getRatingBadgeClass(
+                    className={`w-12 sm:w-14 h-12 sm:h-14 rounded-full flex items-center justify-center font-extrabold text-lg sm:text-xl shadow-2xl ${getRatingBadgeClass(
                       game.rating
                     )}`}
                   >
                     {Number(game.rating).toFixed(1)}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
@@ -345,7 +434,7 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
                 {screenshotsList.map((url, idx) => (
                   <div
                     key={idx}
-                    onClick={() => setSelectedScreenshot(url)}
+                    onClick={() => setSelectedScreenshotIndex(idx)}
                     className="group relative aspect-video rounded-lg overflow-hidden bg-black/50 border border-white/10 hover:border-cyan-400/80 cursor-pointer shadow transition-all"
                   >
                     <img
@@ -395,8 +484,34 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
               <span>Excluir do Vault</span>
             </button>
 
-            <div className="flex items-center gap-2">
-              {isDrop && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {onFinish && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onFinish(game);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-surface-low text-xs font-bold transition-all shadow-sm active-press"
+                >
+                  <Trophy className="w-4 h-4" />
+                  <span>Finalizei</span>
+                </button>
+              )}
+
+              {onDrop && !isDrop && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onDrop(game);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-high hover:bg-surface border border-rose-500/40 text-rose-300 hover:text-white text-xs font-medium transition-colors"
+                >
+                  <Ban className="w-4 h-4" />
+                  <span>Dropei</span>
+                </button>
+              )}
+
+              {isDrop && !onFinish && (
                 <button
                   onClick={() => {
                     onClose();
@@ -415,6 +530,15 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
               )}
 
               <button
+                onClick={() => setShowMediaModal(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-high hover:bg-surface border border-accent-bright/40 text-accent-bright hover:text-white text-xs font-semibold transition-all backdrop-blur-md active-press"
+                title="Trocar Capa e Trilha Sonora do Jogo"
+              >
+                <Palette className="w-4 h-4" />
+                <span>Capa & Trilha</span>
+              </button>
+
+              <button
                 onClick={() => {
                   onClose();
                   onEdit(game);
@@ -428,6 +552,23 @@ export default function GameExpandedModal({ game, onClose, onEdit, onDelete }) {
           </div>
         </div>
       </div>
+
+      {/* Modal de Personalizar Capa & Trilha */}
+      {showMediaModal && (
+        <GameMediaModal
+          game={game}
+          onClose={() => setShowMediaModal(false)}
+          onSave={async (updatedMedia) => {
+            if (onEdit) {
+              await onEdit({
+                ...game,
+                ...updatedMedia
+              });
+            }
+            setShowMediaModal(false);
+          }}
+        />
+      )}
     </div>,
     document.body
   );
