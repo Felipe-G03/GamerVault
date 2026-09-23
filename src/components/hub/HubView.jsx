@@ -53,7 +53,7 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
   // Busca e Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlatformFilter, setSelectedPlatformFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('accordions'); // 'accordions' | 'grid'
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' (padrão inicial) | 'accordions'
 
   // Modais
   const [folderModalPlatform, setFolderModalPlatform] = useState(null);
@@ -62,20 +62,53 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
   const [customizingMediaGame, setCustomizingMediaGame] = useState(null);
 
   // Salva alteração de capa e/ou música personalizada
-  const handleSaveMedia = async ({ imageUrl, themeUrl }) => {
-    if (!customizingMediaGame) return;
-    const { game, vaultGame } = customizingMediaGame;
+  const handleSaveMedia = async (mediaData = {}) => {
+    const imageUrl = mediaData?.imageUrl;
+    const themeUrl = mediaData?.themeUrl;
+    const targetGame = mediaData?.game || customizingMediaGame?.game || selectedExpandedGame;
+    const targetVaultGame =
+      mediaData?.vaultGame ||
+      customizingMediaGame?.vaultGame ||
+      (targetGame?.title ? vaultGamesByTitle[(targetGame.title || '').trim().toLowerCase()] : null);
 
-    // 1. Atualiza no cache do Hub
-    if (game.platform) {
-      const updatedList = updatePlatformGameMedia(game.platform, game.id, { imageUrl, themeUrl });
-      setPlatformGames(prev => ({ ...prev, [game.platform]: updatedList }));
+    if (!targetGame) return;
+
+    const gameId = targetGame.hubId || targetGame.id;
+    const gameTitle = targetGame.title;
+    const platform = targetGame.platform;
+
+    // 1. Atualiza no cache do Hub e no estado React para a plataforma
+    if (platform) {
+      const updatedList = updatePlatformGameMedia(platform, gameId, { imageUrl, themeUrl }, gameTitle);
+      setPlatformGames(prev => ({ ...prev, [platform]: updatedList }));
+    } else {
+      // Se não houver plataforma identificada, atualiza em todas que tiverem o jogo
+      setPlatformGames(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(pId => {
+          next[pId] = updatePlatformGameMedia(pId, gameId, { imageUrl, themeUrl }, gameTitle);
+        });
+        return next;
+      });
     }
 
     // 2. Se o jogo já estiver no Vault do usuário, atualiza no Firestore
-    if (vaultGame?.id && onUpdateGame) {
-      await onUpdateGame(vaultGame.id, { imageUrl, themeUrl });
+    if (targetVaultGame?.id && onUpdateGame) {
+      await onUpdateGame(targetVaultGame.id, {
+        ...(imageUrl !== undefined ? { imageUrl } : {}),
+        ...(themeUrl !== undefined ? { themeUrl } : {})
+      });
     }
+
+    // 3. Atualiza o modal expandido se estiver com ele aberto
+    setSelectedExpandedGame(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        imageUrl: imageUrl !== undefined ? imageUrl : prev.imageUrl,
+        themeUrl: themeUrl !== undefined ? themeUrl : prev.themeUrl
+      };
+    });
 
     setCustomizingMediaGame(null);
   };
@@ -417,7 +450,7 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
       {viewMode === 'grid' ? (
         <section className="space-y-4">
           {allUnifiedGames.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 animate-in fade-in duration-200">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 sm:gap-5 animate-in fade-in duration-200">
               {allUnifiedGames.map((game) => {
                 const normTitle = (game.title || '').trim().toLowerCase();
                 const vaultGame = vaultGamesByTitle[normTitle];
@@ -428,14 +461,19 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
                     game={game}
                     vaultGame={vaultGame}
                     onLaunch={handleLaunchGame}
+                    onCustomizeMedia={(g, vg) => {
+                      setCustomizingMediaGame({ game: g, vaultGame: vg });
+                    }}
                     onCardClick={(g, vg) => {
                       setSelectedExpandedGame({
                         ...g,
                         ...vg,
                         id: vg?.id || g.id,
+                        hubId: g.id,
+                        platform: g.platform || vg?.platform,
                         title: g.title,
                         imageUrl: g.imageUrl || vg?.imageUrl || '',
-                        themeUrl: vg?.themeUrl || null,
+                        themeUrl: vg?.themeUrl || g.themeUrl || null,
                         rating: vg ? Number(vg.rating) || 0 : 0
                       });
                     }}
@@ -525,7 +563,7 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
                 {!isCollapsed && (
                   <div className="p-3.5 sm:p-5">
                     {filteredGames.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 animate-in fade-in duration-200">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 sm:gap-5 animate-in fade-in duration-200">
                         {filteredGames.map((game) => {
                           const normTitle = (game.title || '').trim().toLowerCase();
                           const vaultGame = vaultGamesByTitle[normTitle];
@@ -536,14 +574,19 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
                               game={game}
                               vaultGame={vaultGame}
                               onLaunch={handleLaunchGame}
+                              onCustomizeMedia={(g, vg) => {
+                                setCustomizingMediaGame({ game: g, vaultGame: vg });
+                              }}
                               onCardClick={(g, vg) => {
                                 setSelectedExpandedGame({
                                   ...g,
                                   ...vg,
                                   id: vg?.id || g.id,
+                                  hubId: g.id,
+                                  platform: g.platform || vg?.platform,
                                   title: g.title,
                                   imageUrl: g.imageUrl || vg?.imageUrl || '',
-                                  themeUrl: vg?.themeUrl || null,
+                                  themeUrl: vg?.themeUrl || g.themeUrl || null,
                                   rating: vg ? Number(vg.rating) || 0 : 0
                                 });
                               }}

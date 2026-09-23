@@ -1,8 +1,8 @@
 import React from 'react';
-import { Minus, Square, X, Gamepad2, Rocket } from 'lucide-react';
+import { Minus, Square, X, Gamepad2, Rocket, Settings } from 'lucide-react';
 import ThemeSelector from './ThemeSelector';
 
-export default function TitleBar({ updateInfo, onOpenUpdateModal }) {
+export default function TitleBar({ updateInfo, onOpenUpdateModal, onOpenSettings }) {
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron;
 
   const handleMinimize = () => {
@@ -54,8 +54,16 @@ export default function TitleBar({ updateInfo, onOpenUpdateModal }) {
         </div>
       )}
 
-      {/* Lado Direito: Seletor de Tema & Controles da Janela */}
-      <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' }}>
+      {/* Lado Direito: Seletor de Tema & Configurações & Controles da Janela */}
+      <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' }}>
+        <button
+          onClick={onOpenSettings}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-accent-bright hover:bg-surface-high transition-colors"
+          title="Configurações do Sistema (Inicialização, Bandeja e Atalhos)"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
+
         <ThemeSelector />
 
         {/* Controles da Janela do Electron */}

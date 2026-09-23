@@ -16,6 +16,7 @@ import ProfileView from './components/profile/ProfileView';
 import DiscoverView from './components/discover/DiscoverView';
 import AuthModal from './components/auth/AuthModal';
 import UpdateModal from './components/common/UpdateModal';
+import SettingsModal from './components/layout/SettingsModal';
 import StartupSplash from './components/common/StartupSplash';
 import { Loader2 } from 'lucide-react';
 
@@ -33,6 +34,40 @@ export default function App() {
   // Informações de atualização de versão do sistema
   const [updateInfo, setUpdateInfo] = useState(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
+  // Ouvintes de Ciclo de Vida do Electron (Bandeja / Standby / Configurações)
+  useEffect(() => {
+    if (window.electronAPI) {
+      // Abre o modal de configurações se chamado via menu de contexto da bandeja
+      const unsubSettings = window.electronAPI.onOpenSettingsModal?.(() => {
+        setIsSettingsModalOpen(true);
+      });
+
+      // Pausa BGM/áudio quando a janela é oculta para a bandeja (standby total)
+      const unsubStandby = window.electronAPI.onAppStandby?.(() => {
+        window.dispatchEvent(new CustomEvent('gamervault:pause-bgm'));
+      });
+
+      // Retoma quando a janela é restaurada da bandeja
+      const unsubResume = window.electronAPI.onAppResume?.(() => {
+        window.dispatchEvent(new CustomEvent('gamervault:resume-bgm'));
+      });
+
+      // Quando puxar pelo atalho global do teclado, abre direto na aba Gamers Hub
+      const unsubShortcut = window.electronAPI.onShortcutOpen?.(() => {
+        setEditingGame(null);
+        setActiveTab('hub');
+      });
+
+      return () => {
+        unsubSettings?.();
+        unsubStandby?.();
+        unsubResume?.();
+        unsubShortcut?.();
+      };
+    }
+  }, []);
 
   // Monitora o estado de autenticação
   useEffect(() => {
@@ -231,7 +266,13 @@ export default function App() {
       <TitleBar 
         updateInfo={updateInfo}
         onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
+
+      {/* Modal de Configurações do Sistema */}
+      {isSettingsModalOpen && (
+        <SettingsModal onClose={() => setIsSettingsModalOpen(false)} />
+      )}
 
       {/* Modal de Atualização de Versão */}
       {isUpdateModalOpen && updateInfo && (

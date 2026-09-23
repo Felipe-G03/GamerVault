@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, session, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, session, dialog, Tray, Menu, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -7,6 +7,157 @@ const { spawn } = require('child_process');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 let mainWindow;
+let tray = null;
+app.isQuitting = false;
+
+// ==========================================
+// CONFIGURAÇÕES DO APLICATIVO (SETTINGS)
+// ==========================================
+const SETTINGS_FILE = path.join(app.getPath('userData'), 'gamer_vault_settings.json');
+
+const DEFAULT_SETTINGS = {
+  openAtLogin: false,
+  startMinimized: false,
+  minimizeToTray: true,
+  globalShortcut: 'Alt+Space'
+};
+
+function loadSettings() {
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const data = fs.readFileSync(SETTINGS_FILE, 'utf-8');
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+    }
+  } catch (e) {
+    console.error('Erro ao ler settings:', e);
+  }
+  return { ...DEFAULT_SETTINGS };
+}
+
+function saveSettings(settings) {
+  try {
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Erro ao salvar settings:', e);
+  }
+}
+
+let appSettings = loadSettings();
+
+function showAndFocusWindow() {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.webContents.send('app:resume');
+}
+
+function hideWindowToTray() {
+  if (!mainWindow) return;
+  mainWindow.hide();
+  mainWindow.webContents.send('app:standby');
+}
+
+function toggleWindow() {
+  if (!mainWindow) return;
+  if (mainWindow.isVisible()) {
+    hideWindowToTray();
+  } else {
+    showAndFocusWindow();
+  }
+}
+
+function toggleWindowFromShortcut() {
+  if (!mainWindow) return;
+  if (mainWindow.isVisible() && mainWindow.isFocused()) {
+    hideWindowToTray();
+  } else {
+    showAndFocusWindow();
+    mainWindow.webContents.send('app:shortcut-open');
+  }
+}
+
+function applyGlobalShortcut(shortcutKey) {
+  try {
+    globalShortcut.unregisterAll();
+    if (!shortcutKey || shortcutKey === 'none') return;
+
+    const registered = globalShortcut.register(shortcutKey, () => {
+      toggleWindowFromShortcut();
+    });
+    if (!registered) {
+      console.warn(`Falha ao registrar atalho global: ${shortcutKey}`);
+    }
+  } catch (err) {
+    console.error(`Erro ao registrar atalho global ${shortcutKey}:`, err);
+  }
+}
+
+function applyStartupSettings(openAtLogin, startMinimized) {
+  try {
+    if (app.isPackaged) {
+      app.setLoginItemSettings({
+        openAtLogin: Boolean(openAtLogin),
+        openAsHidden: Boolean(startMinimized),
+        args: startMinimized ? ['--hidden'] : []
+      });
+    }
+  } catch (e) {
+    console.error('Erro ao definir startup settings:', e);
+  }
+}
+
+function createTray() {
+  if (tray) return;
+
+  const iconPath = fs.existsSync(path.join(__dirname, '../public/icon.ico'))
+    ? path.join(__dirname, '../public/icon.ico')
+    : fs.existsSync(path.join(__dirname, '../public/icon.png'))
+    ? path.join(__dirname, '../public/icon.png')
+    : path.join(__dirname, '../public/gamepad.svg');
+
+  try {
+    tray = new Tray(iconPath);
+    tray.setToolTip("Gamer's Vault");
+
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: "Abrir Gamer's Vault",
+        click: () => {
+          showAndFocusWindow();
+        }
+      },
+      {
+        label: 'Configurações',
+        click: () => {
+          showAndFocusWindow();
+          if (mainWindow) {
+            mainWindow.webContents.send('open-settings-modal');
+          }
+        }
+      },
+      { type: 'separator' },
+      {
+        label: 'Sair do GamerVault',
+        click: () => {
+          app.isQuitting = true;
+          app.quit();
+        }
+      }
+    ]);
+
+    tray.setContextMenu(contextMenu);
+
+    tray.on('click', () => {
+      toggleWindow();
+    });
+    tray.on('double-click', () => {
+      showAndFocusWindow();
+    });
+  } catch (e) {
+    console.error('Erro ao criar Tray:', e);
+  }
+}
 
 // ==========================================
 // FUNÇÕES AUXILIARES DE SCANNING DO GAME HUB
@@ -214,6 +365,21 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
+  // Verifica se deve iniciar minimizado na bandeja
+  const isHiddenLaunch = process.argv.includes('--hidden') || (appSettings.openAtLogin && appSettings.startMinimized);
+  if (isHiddenLaunch) {
+    mainWindow.hide();
+  }
+
+  // Intercepta fechamento da janela para ir para a bandeja se configurado
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting && appSettings.minimizeToTray) {
+      event.preventDefault();
+      hideWindowToTray();
+      return false;
+    }
+  });
+
   // Janela maximizada / restaurada IPC
   ipcMain.on('window-minimize', () => {
     if (mainWindow) mainWindow.minimize();
@@ -230,7 +396,14 @@ function createWindow() {
   });
 
   ipcMain.on('window-close', () => {
-    if (mainWindow) mainWindow.close();
+    if (mainWindow) {
+      if (!app.isQuitting && appSettings.minimizeToTray) {
+        hideWindowToTray();
+      } else {
+        app.isQuitting = true;
+        mainWindow.close();
+      }
+    }
   });
 
   // Handler para download e execução do instalador da nova versão
@@ -414,9 +587,19 @@ function createWindow() {
   });
 
   // Qualquer link externo clicado abre diretamente no navegador do sistema operacional (Chrome, Edge, etc.)
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
+  // ==========================================
+  // CONFIGURAÇÕES IPC (SETTINGS)
+  // ==========================================
+  ipcMain.handle('settings:get', async () => {
+    return appSettings;
+  });
+
+  ipcMain.handle('settings:save', async (_event, newSettings) => {
+    appSettings = { ...appSettings, ...newSettings };
+    saveSettings(appSettings);
+    applyStartupSettings(appSettings.openAtLogin, appSettings.startMinimized);
+    applyGlobalShortcut(appSettings.globalShortcut);
+    return { success: true, settings: appSettings };
   });
 
   mainWindow.on('closed', () => {
@@ -437,14 +620,29 @@ app.whenReady().then(() => {
   );
 
   createWindow();
+  createTray();
+  applyGlobalShortcut(appSettings.globalShortcut);
+  applyStartupSettings(appSettings.openAtLogin, appSettings.startMinimized);
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    } else {
+      showAndFocusWindow();
+    }
   });
+});
+
+app.on('will-quit', () => {
+  try {
+    globalShortcut.unregisterAll();
+  } catch (_) {}
 });
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit();
+    if (!appSettings.minimizeToTray || app.isQuitting) {
+      app.quit();
+    }
   }
 });

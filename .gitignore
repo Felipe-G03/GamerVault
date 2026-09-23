@@ -31,8 +31,7 @@ desktop.ini
 firebase-service-account.json
 
 # Audio files (direitos autorais)
-public/bgm/*.mp3
-!public/bgm/.gitkeep
+public/bgm/
 
 # Python cache
 __pycache__/

@@ -287,11 +287,21 @@ export async function launchGame(game) {
 /**
  * Atualiza a capa (imageUrl) e/ou trilha sonora (themeUrl) de um jogo no cache do Hub
  */
-export function updatePlatformGameMedia(platformId, gameId, { imageUrl, themeUrl }) {
+export function updatePlatformGameMedia(platformId, gameId, { imageUrl, themeUrl }, gameTitle) {
   try {
     const games = getCachedPlatformGames(platformId);
+    const targetTitleNorm = (gameTitle || '').trim().toLowerCase();
+
+    let foundTargetTitle = gameTitle || null;
+
     const updated = games.map(g => {
-      if (g.id === gameId) {
+      const matchId = (gameId && (g.id === gameId || g.hubId === gameId));
+      const matchTitle = (targetTitleNorm && g.title?.trim().toLowerCase() === targetTitleNorm);
+
+      if (matchId || matchTitle) {
+        if (!foundTargetTitle && g.title) {
+          foundTargetTitle = g.title;
+        }
         return {
           ...g,
           imageUrl: imageUrl !== undefined ? imageUrl : g.imageUrl,
@@ -300,18 +310,24 @@ export function updatePlatformGameMedia(platformId, gameId, { imageUrl, themeUrl
       }
       return g;
     });
+
     setCachedPlatformGames(platformId, updated);
 
-    // Também atualiza no cache geral por título
-    const targetGame = games.find(g => g.id === gameId);
-    if (targetGame?.title) {
+    // Também atualiza ou insere no cache geral por título
+    const effectiveTitle = foundTargetTitle || gameTitle;
+    if (effectiveTitle) {
       const cache = getRawgCache();
-      const cacheKey = targetGame.title.trim().toLowerCase();
-      if (cache[cacheKey]) {
+      const cacheKey = effectiveTitle.trim().toLowerCase();
+      if (!cache[cacheKey]) {
+        cache[cacheKey] = {
+          imageUrl: imageUrl || '',
+          themeUrl: themeUrl || null
+        };
+      } else {
         if (imageUrl !== undefined) cache[cacheKey].imageUrl = imageUrl;
         if (themeUrl !== undefined) cache[cacheKey].themeUrl = themeUrl;
-        saveRawgCache(cache);
       }
+      saveRawgCache(cache);
     }
 
     return updated;

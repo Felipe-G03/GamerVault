@@ -26,5 +26,28 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readImageData: (filePath) => ipcRenderer.invoke('hub:read-image-data', filePath),
   scanPlatform: (params) => ipcRenderer.invoke('hub:scan-platform', params),
   launchGame: (params) => ipcRenderer.invoke('hub:launch-game', params),
+  // Settings & System Lifecycle API
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
+  onAppStandby: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('app:standby', handler);
+    return () => ipcRenderer.removeListener('app:standby', handler);
+  },
+  onAppResume: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('app:resume', handler);
+    return () => ipcRenderer.removeListener('app:resume', handler);
+  },
+  onOpenSettingsModal: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('open-settings-modal', handler);
+    return () => ipcRenderer.removeListener('open-settings-modal', handler);
+  },
+  onShortcutOpen: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('app:shortcut-open', handler);
+    return () => ipcRenderer.removeListener('app:shortcut-open', handler);
+  },
   isElectron: true
 });
