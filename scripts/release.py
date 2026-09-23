@@ -198,8 +198,77 @@ def update_firebase(version, direct_url, changelog, release_date):
     config_ref.set(payload, merge=True)
     print("✅ Documento 'config/app' atualizado no Firestore!")
 
+def update_env_variable(key, value):
+    """Atualiza ou insere uma variável no arquivo .env preservando o restante."""
+    lines = []
+    found = False
+    if os.path.exists(ENV_PATH):
+        with open(ENV_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip().startswith(f"{key}=") or line.strip() == key:
+                    lines.append(f"{key}={value}\n")
+                    found = True
+                else:
+                    lines.append(line)
+    if not found:
+        if lines and not lines[-1].endswith("\n"):
+            lines.append("\n")
+        lines.append(f"{key}={value}\n")
+    with open(ENV_PATH, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+
+def setup_dropbox_auth():
+    """Gera um Refresh Token perpétuo (offline) para o Dropbox."""
+    from dropbox import DropboxOAuth2FlowNoRedirect
+
+    print("\n🔑 CONFIGURAÇÃO DO REFRESH TOKEN DO DROPBOX")
+    print("=" * 60)
+    print("Para gerar um token permanente que nunca expira, informe seu")
+    print("App Key e App Secret (painel https://www.dropbox.com/developers/apps):\n")
+
+    env_vars = load_env()
+    app_key = env_vars.get("DROPBOX_APP_KEY")
+    if not app_key:
+        app_key = input("👉 Digite seu Dropbox App Key: ").strip()
+
+    app_secret = env_vars.get("DROPBOX_APP_SECRET")
+    if not app_secret:
+        app_secret = input("👉 Digite seu Dropbox App Secret: ").strip()
+
+    if not app_key or not app_secret:
+        print("❌ App Key e App Secret são obrigatórios.")
+        sys.exit(1)
+
+    auth_flow = DropboxOAuth2FlowNoRedirect(
+        app_key,
+        app_secret,
+        token_access_type='offline'
+    )
+    authorize_url = auth_flow.start()
+
+    print("\n1. Acesse o seguinte link no seu navegador para autorizar:")
+    print(f"\n   🔗 {authorize_url}\n")
+    print("2. Clique em 'Permitir' / 'Allow' e copie o código que aparecer na tela.")
+    auth_code = input("\n👉 Cole o código de autorização aqui: ").strip()
+
+    try:
+        oauth_result = auth_flow.finish(auth_code)
+        refresh_token = oauth_result.refresh_token
+        print("\n✅ Sucesso! Refresh Token permanente obtido com sucesso.")
+
+        update_env_variable("DROPBOX_APP_KEY", app_key)
+        update_env_variable("DROPBOX_APP_SECRET", app_secret)
+        update_env_variable("DROPBOX_REFRESH_TOKEN", refresh_token)
+        print("💾 Variáveis salvas no seu arquivo .env com sucesso!")
+        print("Agora suas releases nunca mais expiram!\n")
+        return refresh_token, app_key, app_secret
+    except Exception as e:
+        print(f"\n❌ Erro ao validar o código com o Dropbox: {e}")
+        sys.exit(1)
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Publicador de Atualizações do Gamer's Vault")
+    parser.add_argument("--auth", action="store_true", help="Gera e configura o Refresh Token permanente do Dropbox")
     parser.add_argument("--build", action="store_true", help="Força a compilação do executável antes de enviar")
     parser.add_argument("--skip-build", action="store_true", help="Pula a etapa de compilação")
     parser.add_argument("--changelog", type=str, help="Texto das novidades da versão")
@@ -209,27 +278,43 @@ def parse_arguments():
 def main():
     args = parse_arguments()
 
+    if args.auth:
+        setup_dropbox_auth()
+        return
+
     print("=" * 60)
     print(" 🎮 GAMER'S VAULT - PUBLICADOR DE ATUALIZAÇÃO AUTOMÁTICA")
     print("=" * 60)
 
     # 1. Carrega variáveis de ambiente
     env_vars = load_env()
+    refresh_token = env_vars.get("DROPBOX_REFRESH_TOKEN") or os.environ.get("DROPBOX_REFRESH_TOKEN")
+    app_key = env_vars.get("DROPBOX_APP_KEY") or os.environ.get("DROPBOX_APP_KEY")
+    app_secret = env_vars.get("DROPBOX_APP_SECRET") or os.environ.get("DROPBOX_APP_SECRET")
     dropbox_token = env_vars.get("DROPBOX_ACCESS_TOKEN") or os.environ.get("DROPBOX_ACCESS_TOKEN")
-    if not dropbox_token:
-        dropbox_token = input("\n🔑 Digite o DROPBOX_ACCESS_TOKEN: ").strip()
-        if not dropbox_token:
-            print("❌ O Token do Dropbox é obrigatório.")
-            sys.exit(1)
 
     # 2. Testa autenticação no Dropbox
     try:
-        dbx = dropbox.Dropbox(dropbox_token)
+        if refresh_token and app_key:
+            print("🔄 Autenticando via Dropbox Refresh Token (renovação perpétua)...")
+            dbx = dropbox.Dropbox(
+                oauth2_refresh_token=refresh_token,
+                app_key=app_key,
+                app_secret=app_secret
+            )
+        elif dropbox_token:
+            dbx = dropbox.Dropbox(dropbox_token)
+        else:
+            print("\n❌ Nenhuma credencial do Dropbox encontrada.")
+            print("Configure DROPBOX_REFRESH_TOKEN + DROPBOX_APP_KEY ou DROPBOX_ACCESS_TOKEN no .env.")
+            sys.exit(1)
+
         account = dbx.users_get_current_account()
         print(f"👤 Conectado ao Dropbox como: {account.name.display_name} ({account.email})")
     except Exception as e:
         print(f"❌ Erro ao autenticar no Dropbox: {e}")
-        print("Dica: Se o token for temporário (short-lived), gere um novo em https://www.dropbox.com/developers/apps")
+        print("Dica: Para token perpétuo, execute: python scripts/release.py --auth")
+        print("Ou se preferir token temporário, gere em https://www.dropbox.com/developers/apps")
         sys.exit(1)
 
     # 3. Detecta versão
