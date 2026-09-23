@@ -1,6 +1,6 @@
 {
   "name": "gamer-vault",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "type": "module",
   "description": "Seu depósito pessoal e social de jogos",
   "main": "electron/main.cjs",
@@ -22,7 +22,8 @@
     },
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "public/icon.ico"
     ],
     "win": {
       "target": "nsis",

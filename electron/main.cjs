@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, session, dialog, Tray, Menu, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, session, dialog, Tray, Menu, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -44,6 +44,24 @@ function saveSettings(settings) {
 
 let appSettings = loadSettings();
 
+// Retorna o caminho absoluto do ícone compatível com ambiente de dev e empacotado (.asar)
+function getAppIconPath() {
+  const candidates = [
+    path.join(__dirname, 'icon.ico'),
+    path.join(__dirname, '../dist/icon.ico'),
+    path.join(__dirname, '../public/icon.ico'),
+    path.join(process.resourcesPath, 'icon.ico'),
+    path.join(process.resourcesPath, 'app.asar.unpacked/dist/icon.ico'),
+    path.join(process.resourcesPath, 'app.asar.unpacked/electron/icon.ico')
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch (_) {}
+  }
+  return null;
+}
+
 function showAndFocusWindow() {
   if (!mainWindow) return;
   if (mainWindow.isMinimized()) mainWindow.restore();
@@ -54,6 +72,9 @@ function showAndFocusWindow() {
 
 function hideWindowToTray() {
   if (!mainWindow) return;
+  if (!tray || tray.isDestroyed()) {
+    createTray();
+  }
   mainWindow.hide();
   mainWindow.webContents.send('app:standby');
 }
@@ -108,16 +129,17 @@ function applyStartupSettings(openAtLogin, startMinimized) {
 }
 
 function createTray() {
-  if (tray) return;
+  if (tray && !tray.isDestroyed()) return;
 
-  const iconPath = fs.existsSync(path.join(__dirname, '../public/icon.ico'))
-    ? path.join(__dirname, '../public/icon.ico')
-    : fs.existsSync(path.join(__dirname, '../public/icon.png'))
-    ? path.join(__dirname, '../public/icon.png')
-    : path.join(__dirname, '../public/gamepad.svg');
+  const iconPath = getAppIconPath();
+  if (!iconPath) {
+    console.warn('Nenhum arquivo de ícone encontrado para a bandeja do sistema.');
+    return;
+  }
 
   try {
-    tray = new Tray(iconPath);
+    const iconImage = nativeImage.createFromPath(iconPath);
+    tray = new Tray(iconImage);
     tray.setToolTip("Gamer's Vault");
 
     const contextMenu = Menu.buildFromTemplate([
@@ -350,11 +372,7 @@ function createWindow() {
       contextIsolation: true,
       webSecurity: false // Facilita carregar embeds e imagens de capas sem bloqueios CORS estritos no app
     },
-    icon: fs.existsSync(path.join(__dirname, '../public/icon.ico'))
-      ? path.join(__dirname, '../public/icon.ico')
-      : fs.existsSync(path.join(__dirname, '../public/icon.png'))
-      ? path.join(__dirname, '../public/icon.png')
-      : path.join(__dirname, '../public/gamepad.svg')
+    icon: getAppIconPath() || undefined
   });
 
   // Em modo de desenvolvimento, carrega a URL do Vite
@@ -633,7 +651,16 @@ app.whenReady().then(() => {
   });
 });
 
+app.on('before-quit', () => {
+  app.isQuitting = true;
+});
+
 app.on('will-quit', () => {
+  if (tray && !tray.isDestroyed()) {
+    try {
+      tray.destroy();
+    } catch (_) {}
+  }
   try {
     globalShortcut.unregisterAll();
   } catch (_) {}

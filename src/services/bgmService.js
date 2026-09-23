@@ -119,11 +119,35 @@ export async function syncGitHubTracks() {
     for (const item of rootItems) {
       if (item.type === 'dir') {
         const folderName = item.name.trim();
-        const folderDisplayName = folderName.charAt(0).toUpperCase() + folderName.slice(1);
+
+        // Verifica flag no próprio nome da pasta (ex: "Zelda [no-all]", "_Sountracks", "!OSTs")
+        const hasNoAllNameTag =
+          /\[no[-_]?all\]|\(no[-_]?all\)|[_\-\s]no[-_]?all|standalone/i.test(folderName) ||
+          /^[_!.]/.test(folderName);
+
+        // Limpa tags do nome da pasta para exibir um nome bonito nos botões
+        let folderDisplayName = folderName
+          .replace(/\[no[-_]?all\]|\(no[-_]?all\)|!no[-_]?all|_no[-_]?all/gi, '')
+          .replace(/^[_\s.!-]+/, '')
+          .replace(/[_\s.-]+$/, '')
+          .trim();
+
+        if (!folderDisplayName) {
+          folderDisplayName = folderName;
+        }
+        folderDisplayName = folderDisplayName.charAt(0).toUpperCase() + folderDisplayName.slice(1);
 
         try {
           const files = await fetchGitHubContents(repo, item.path, token);
           if (Array.isArray(files)) {
+            // Verifica se existe um arquivo de flag dentro da pasta (ex: .noall, noall, no-all.txt)
+            const hasNoAllFile = files.some(
+              (f) =>
+                f.type === 'file' &&
+                /^\.?(no[-_]?all|exclusive|standalone)(\.(txt|md))?$/i.test(f.name)
+            );
+
+            const isExcludedFromAll = hasNoAllNameTag || hasNoAllFile;
             const folderTracks = [];
 
             for (const file of files) {
@@ -136,11 +160,16 @@ export async function syncGitHubTracks() {
                   rawName: file.name,
                   downloadUrl: file.download_url,
                   apiUrl: file.url,
-                  gitUrl: file.git_url
+                  gitUrl: file.git_url,
+                  isExcludedFromAll
                 };
 
                 folderTracks.push(trackObj);
-                allTracks.push(trackObj);
+
+                // Só adiciona na coleção "All" se a pasta NÃO tiver a flag de exclusão
+                if (!isExcludedFromAll) {
+                  allTracks.push(trackObj);
+                }
               }
             }
 
