@@ -8,13 +8,17 @@ let activeProcessCapture = null;
 
 /**
  * Cria uma faixa de áudio (MediaStreamTrack) capturando exclusivamente o som do processo alvo.
- * @param {number} pid Process ID do executável do jogo/janela
+ * @param {number|object} sourceOrPid Process ID ou objeto source da janela
  * @returns {Promise<{ track: MediaStreamTrack, stop: () => void } | null>}
  */
-export async function createProcessAudioTrack(pid) {
-  if (!window.electronAPI?.startProcessAudio || !pid) {
+export async function createProcessAudioTrack(sourceOrPid) {
+  if (!window.electronAPI?.startProcessAudio || !sourceOrPid) {
     return null;
   }
+
+  const params = typeof sourceOrPid === 'object'
+    ? { pid: sourceOrPid.pid, windowId: sourceOrPid.id, windowName: sourceOrPid.name }
+    : { pid: Number(sourceOrPid) };
 
   // Encerra qualquer captura prévia
   stopProcessAudioTrack();
@@ -85,7 +89,7 @@ export async function createProcessAudioTrack(pid) {
     });
 
     // Inicia a captura nativa no processo
-    const res = await window.electronAPI.startProcessAudio(pid);
+    const res = await window.electronAPI.startProcessAudio(params);
     if (!res?.success) {
       removeListener?.();
       try {

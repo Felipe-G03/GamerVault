@@ -120,14 +120,24 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Checa se há atualização disponível no Firestore ao iniciar
-  useEffect(() => {
+  // Checa se há atualização disponível no Firestore
+  const handleCheckUpdate = async () => {
     const currentVer = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0';
-    checkAppUpdate(currentVer).then((info) => {
+    try {
+      const info = await checkAppUpdate(currentVer);
       if (info?.hasUpdate) {
         setUpdateInfo(info);
+        setIsUpdateModalOpen(true);
       }
-    });
+      return info;
+    } catch (err) {
+      console.error('Erro na verificação manual de atualização:', err);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    handleCheckUpdate();
   }, []);
 
   // Carrega perfil e jogos
@@ -288,11 +298,16 @@ export default function App() {
         updateInfo={updateInfo}
         onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onCheckUpdate={handleCheckUpdate}
       />
 
       {/* Modal de Configurações do Sistema */}
       {isSettingsModalOpen && (
-        <SettingsModal onClose={() => setIsSettingsModalOpen(false)} />
+        <SettingsModal 
+          onClose={() => setIsSettingsModalOpen(false)}
+          onCheckUpdate={handleCheckUpdate}
+          updateInfo={updateInfo}
+        />
       )}
 
       {/* Modal do VaultCast (Transmissão de Jogos/Janelas na Guilda) */}

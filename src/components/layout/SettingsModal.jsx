@@ -10,7 +10,9 @@ import {
   Check,
   Zap,
   Info,
-  Keyboard
+  Keyboard,
+  RotateCw,
+  Rocket
 } from 'lucide-react';
 
 const PRESET_SHORTCUTS = [
@@ -20,7 +22,7 @@ const PRESET_SHORTCUTS = [
   { label: 'F10', value: 'F10' }
 ];
 
-export default function SettingsModal({ onClose }) {
+export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
   const [settings, setSettings] = useState({
     openAtLogin: false,
     startMinimized: false,
@@ -32,6 +34,27 @@ export default function SettingsModal({ onClose }) {
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateFeedback, setUpdateFeedback] = useState(null);
+
+  const handleCheckUpdateClick = async () => {
+    if (checkingUpdate) return;
+    setCheckingUpdate(true);
+    setUpdateFeedback(null);
+    try {
+      const res = await onCheckUpdate?.();
+      if (res?.hasUpdate) {
+        setUpdateFeedback({ type: 'hasUpdate', message: `Nova versão v${res.latestVersion} disponível!` });
+      } else {
+        const currentVer = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0';
+        setUpdateFeedback({ type: 'latest', message: `Você já está na versão mais recente (v${currentVer})!` });
+      }
+    } catch (_) {
+      setUpdateFeedback({ type: 'error', message: 'Erro ao verificar atualizações no servidor.' });
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   // Carrega as configurações atuais do Electron ou LocalStorage
   useEffect(() => {
@@ -313,6 +336,49 @@ export default function SettingsModal({ onClose }) {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Seção: Atualizações do Gamer's Vault */}
+          <div className="p-4 rounded-xl bg-surface border border-border/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+                  <RotateCw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-gamer font-bold text-white tracking-wider uppercase">
+                    Atualizações do Gamer's Vault
+                  </h4>
+                  <p className="text-[11px] text-gray-400">
+                    Versão instalada: <span className="text-cyan-400 font-mono font-semibold">v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0'}</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCheckUpdateClick}
+                disabled={checkingUpdate}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.15)]"
+              >
+                <RotateCw className={`w-3.5 h-3.5 ${checkingUpdate ? 'animate-spin' : ''}`} />
+                <span>{checkingUpdate ? 'Buscando...' : 'Buscar Atualizações'}</span>
+              </button>
+            </div>
+
+            {updateFeedback && (
+              <div className={`text-[11px] font-mono p-2.5 rounded-lg border flex items-center gap-2 ${
+                updateFeedback.type === 'hasUpdate' 
+                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
+                  : updateFeedback.type === 'latest'
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                    : 'bg-red-500/15 border-red-500/40 text-red-300'
+              }`}>
+                {updateFeedback.type === 'hasUpdate' && <Rocket className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                {updateFeedback.type === 'latest' && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                <span>{updateFeedback.message}</span>
+              </div>
+            )}
           </div>
 
           {/* Card Informativo: Standby de Zero Consumo */}

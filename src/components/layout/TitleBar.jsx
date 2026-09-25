@@ -1,9 +1,21 @@
-import React from 'react';
-import { Minus, Square, X, Gamepad2, Rocket, Settings } from 'lucide-react';
+import React, { useState } from 'react';
+import { Minus, Square, X, Gamepad2, Rocket, Settings, RotateCw } from 'lucide-react';
 import ThemeSelector from './ThemeSelector';
 
-export default function TitleBar({ updateInfo, onOpenUpdateModal, onOpenSettings }) {
+export default function TitleBar({ updateInfo, onOpenUpdateModal, onOpenSettings, onCheckUpdate }) {
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron;
+  const [isChecking, setIsChecking] = useState(false);
+
+  const handleManualCheck = async (e) => {
+    e.stopPropagation();
+    if (isChecking) return;
+    setIsChecking(true);
+    try {
+      await onCheckUpdate?.();
+    } finally {
+      setTimeout(() => setIsChecking(false), 800);
+    }
+  };
 
   const handleMinimize = () => {
     if (window.electronAPI) window.electronAPI.minimizeWindow();
@@ -28,9 +40,20 @@ export default function TitleBar({ updateInfo, onOpenUpdateModal, onOpenSettings
           <Gamepad2 className="w-4 h-4 text-accent-bright" />
           <span className="text-[11px] font-gamer text-white tracking-widest uppercase">Gamer's Vault</span>
         </div>
-        <span className="hidden sm:inline text-[10px] text-gray-500 border-l border-border/80 pl-2.5">
-          v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0'} DESKTOP
-        </span>
+        <div className="hidden sm:flex items-center gap-1.5 border-l border-border/80 pl-2.5">
+          <span className="text-[10px] text-gray-500">
+            v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0'} DESKTOP
+          </span>
+          <button
+            onClick={handleManualCheck}
+            disabled={isChecking}
+            className="p-1 rounded text-gray-500 hover:text-cyan-400 hover:bg-surface-high transition-colors"
+            style={{ WebkitAppRegion: 'no-drag' }}
+            title="Verificar atualizações do Gamer's Vault"
+          >
+            <RotateCw className={`w-2.5 h-2.5 ${isChecking ? 'animate-spin text-cyan-400' : ''}`} />
+          </button>
+        </div>
         <div className="hidden md:flex items-center gap-1.5 text-[10px] text-gray-400">
           <span 
             className="w-1.5 h-1.5 rounded-full bg-accent-bright"

@@ -658,27 +658,52 @@ function createWindow() {
   }
   let activeLoopbackCapture = null;
 
-  function getWindowPidMap() {
-    const map = new Map();
-    if (process.platform !== 'win32') return map;
-    try {
-      const { execSync } = require('child_process');
-      const stdout = execSync('chcp 65001 > nul && tasklist /v /fo csv', { encoding: 'utf-8', timeout: 4000 });
-      const lines = stdout.trim().split('\r\n');
-      for (const line of lines) {
-        const parts = line.split('","').map(s => s.replace(/^"|"$/g, ''));
-        if (parts.length >= 9) {
-          const pid = parseInt(parts[1], 10);
-          const title = parts[8];
-          if (title && title !== 'N/A' && !isNaN(pid)) {
-            map.set(title.toLowerCase().trim(), pid);
+  // Busca instantânea de PID no Windows ao iniciar a live
+  function resolveWindowPid(windowId, windowName) {
+    if (process.platform !== 'win32') return null;
+    const hwndMatch = String(windowId || '').match(/^window:(\d+):/);
+    const hwnd = hwndMatch ? parseInt(hwndMatch[1], 10) : 0;
+    const cleanName = String(windowName || '').trim();
+
+    const fs = require('fs');
+    const { execFileSync } = require('child_process');
+
+    const candidates = [
+      path.join(__dirname, 'bin', 'get_window_pid.exe'),
+      path.join(process.resourcesPath || '', 'bin', 'get_window_pid.exe'),
+      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'electron', 'bin', 'get_window_pid.exe'),
+      path.join(__dirname, '..', 'electron', 'bin', 'get_window_pid.exe')
+    ];
+
+    for (const helperPath of candidates) {
+      if (fs.existsSync(helperPath)) {
+        try {
+          if (hwnd > 0) {
+            const out = execFileSync(helperPath, [String(hwnd)], { encoding: 'utf-8', timeout: 1500 });
+            const pid = parseInt(out.trim(), 10);
+            if (!isNaN(pid) && pid > 0) {
+              console.log(`[VaultCast] PID identificado com sucesso via HWND (${hwnd}): ${pid}`);
+              return pid;
+            }
           }
+          if (cleanName.length > 2) {
+            const out = execFileSync(helperPath, [cleanName], { encoding: 'utf-8', timeout: 1500 });
+            const pid = parseInt(out.trim(), 10);
+            if (!isNaN(pid) && pid > 0) {
+              console.log(`[VaultCast] PID identificado com sucesso via Título ("${cleanName}"): ${pid}`);
+              return pid;
+            }
+          }
+        } catch (err) {
+          console.warn('[VaultCast] Erro ao executar get_window_pid helper:', err.message);
         }
       }
-    } catch (_) {}
-    return map;
+    }
+
+    return null;
   }
 
+  // Listagem instantânea de janelas (sem travamentos de tasklist)
   ipcMain.handle('vaultcast:get-sources', async () => {
     try {
       const sources = await desktopCapturer.getSources({
@@ -687,33 +712,13 @@ function createWindow() {
         fetchWindowIcons: true
       });
 
-      const pidMap = getWindowPidMap();
-
-      return sources.map(source => {
-        let pid = null;
-        if (!source.id.startsWith('screen:')) {
-          const cleanName = source.name.toLowerCase().trim();
-          if (pidMap.has(cleanName)) {
-            pid = pidMap.get(cleanName);
-          } else {
-            for (const [title, p] of pidMap.entries()) {
-              if (title.includes(cleanName) || cleanName.includes(title)) {
-                pid = p;
-                break;
-              }
-            }
-          }
-        }
-
-        return {
-          id: source.id,
-          name: source.name,
-          thumbnail: source.thumbnail.toDataURL(),
-          appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
-          isScreen: source.id.startsWith('screen:'),
-          pid
-        };
-      });
+      return sources.map(source => ({
+        id: source.id,
+        name: source.name,
+        thumbnail: source.thumbnail.toDataURL(),
+        appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
+        isScreen: source.id.startsWith('screen:')
+      }));
     } catch (err) {
       console.error('Erro ao capturar fontes de tela/janela para o VaultCast:', err);
       return [];
@@ -721,10 +726,18 @@ function createWindow() {
   });
 
   // Captura exclusiva de áudio do processo selecionado (WASAPI Process Loopback)
-  ipcMain.handle('vaultcast:start-process-audio', async (_event, { pid }) => {
+  ipcMain.handle('vaultcast:start-process-audio', async (_event, params) => {
     try {
-      if (!loopbackModule) throw new Error('loopback-capture indisponível.');
-      if (!pid) throw new Error('PID do processo não informado.');
+      if (!loopbackModule) throw new Error('Módulo loopback-capture nativo não está disponível.');
+
+      let targetPid = params?.pid ? Number(params.pid) : null;
+      if (!targetPid && params?.windowId) {
+        targetPid = resolveWindowPid(params.windowId, params.windowName);
+      }
+
+      if (!targetPid) {
+        throw new Error('Não foi possível identificar o PID do processo desta janela.');
+      }
 
       if (activeLoopbackCapture) {
         try { activeLoopbackCapture.stop(); } catch (_) {}
@@ -734,15 +747,15 @@ function createWindow() {
       const capture = new loopbackModule.LoopbackCapture();
       activeLoopbackCapture = capture;
 
-      capture.start(Number(pid), true, (chunk) => {
+      capture.start(targetPid, true, (chunk) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('vaultcast:process-audio-chunk', chunk);
         }
       });
 
-      return { success: true };
+      return { success: true, pid: targetPid };
     } catch (err) {
-      console.error('Erro ao iniciar captura de áudio do processo:', err);
+      console.warn('Aviso na captura de áudio por processo:', err.message);
       return { success: false, error: err.message };
     }
   });

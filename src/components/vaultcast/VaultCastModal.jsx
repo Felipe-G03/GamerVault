@@ -71,7 +71,7 @@ export default function VaultCastModal({
   const [streamTitle, setStreamTitle] = useState('');
   const [resolution, setResolution] = useState('1080'); // '720' | '1080'
   const [targetFps, setTargetFps] = useState('60'); // '30' | '60'
-  const [captureAudio, setCaptureAudio] = useState(true);
+  const [audioMode, setAudioMode] = useState('window'); // 'window' | 'system' | 'none'
 
   // Estado da Transmissão Local
   const [isBroadcasting, setIsBroadcasting] = useState(false);
@@ -261,19 +261,23 @@ export default function VaultCastModal({
       const height = resolution === '1080' ? 1080 : 720;
       const width = resolution === '1080' ? 1920 : 1280;
 
-      // 1. Se for uma janela com PID identificado, ativa o isolamento de áudio por processo (WASAPI Process Loopback)
+      // 1. Se o modo for 'window' e for uma janela, ativa o isolamento de áudio por processo (WASAPI Process Loopback)
       let processAudio = null;
-      if (captureAudio && !selectedSource?.isScreen && selectedSource?.pid) {
+      if (audioMode === 'window' && !selectedSource?.isScreen) {
         try {
-          processAudio = await createProcessAudioTrack(selectedSource.pid);
+          processAudio = await createProcessAudioTrack(selectedSource);
+          if (!processAudio) {
+            console.warn('Isolamento de áudio do processo não respondeu, usando áudio geral do sistema.');
+          }
         } catch (pErr) {
           console.warn('Falha no isolamento de áudio por processo, usando áudio geral:', pErr);
         }
       }
 
-      // Se temos áudio exclusivo do processo, desliga o desktop audio geral no getUserMedia
+      // Se temos áudio exclusivo do processo, desliga o áudio geral no getUserMedia
+      const shouldCaptureSystemAudio = (audioMode === 'system') || (audioMode === 'window' && !processAudio);
       const constraints = {
-        audio: (!processAudio && captureAudio)
+        audio: shouldCaptureSystemAudio
           ? {
               mandatory: {
                 chromeMediaSource: 'desktop'
@@ -406,12 +410,12 @@ export default function VaultCastModal({
 
       const newStream = await navigator.mediaDevices.getUserMedia(videoConstraints);
 
-      // 2. Se a nova janela tiver PID, troca para o áudio exclusivo do novo processo
+      // 2. Se a nova janela for transmitida com isolamento de áudio, troca para o áudio exclusivo do novo processo
       let newProcessAudio = null;
-      if (captureAudio && !newSource?.isScreen && newSource?.pid) {
+      if (audioMode === 'window' && !newSource?.isScreen) {
         try {
           stopProcessAudioTrack();
-          newProcessAudio = await createProcessAudioTrack(newSource.pid);
+          newProcessAudio = await createProcessAudioTrack(newSource);
         } catch (pErr) {
           console.warn('Falha ao obter áudio do novo processo:', pErr);
         }
@@ -419,12 +423,12 @@ export default function VaultCastModal({
 
       if (newProcessAudio?.track) {
         newStream.addTrack(newProcessAudio.track);
-      } else {
+      } else if (audioMode !== 'none') {
         // Fallback: Preserva o áudio atual se for compatível
         const existingAudioTrack = streamRef.current?.getAudioTracks()?.[0];
-        if (captureAudio && existingAudioTrack && existingAudioTrack.readyState === 'live') {
+        if (existingAudioTrack && existingAudioTrack.readyState === 'live') {
           newStream.addTrack(existingAudioTrack);
-        } else if (captureAudio) {
+        } else {
           try {
             const audioStream = await navigator.mediaDevices.getUserMedia({
               audio: { mandatory: { chromeMediaSource: 'desktop' } },
@@ -1220,34 +1224,70 @@ export default function VaultCastModal({
                       </div>
 
                       {/* OPÇÃO DE ÁUDIO */}
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         <label className="text-xs font-semibold text-gray-300">
                           Áudio da Transmissão:
                         </label>
-                        <label className="flex items-start gap-2.5 p-2.5 bg-[#141824] border border-[#242b3d] rounded-xl cursor-pointer hover:bg-[#1a1f30] transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={captureAudio}
-                            onChange={(e) => setCaptureAudio(e.target.checked)}
-                            className="mt-0.5 rounded accent-emerald-500 w-4 h-4 cursor-pointer"
-                          />
-                          <div className="flex flex-col">
-                            <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
-                              {selectedSource?.isScreen
-                                ? 'Som do Computador (Tela Inteira)'
-                                : selectedSource?.pid
-                                  ? 'Áudio Exclusivo desta Janela (Sem eco do Discord)'
-                                  : 'Áudio do Sistema / Jogo'}
-                            </span>
-                            <span className="text-[10px] text-gray-400">
-                              {selectedSource?.isScreen
-                                ? 'Transmite todos os sons do sistema'
-                                : selectedSource?.pid
-                                  ? 'Isolado por processo: seus amigos não ouvem a si mesmos'
-                                  : 'Captura o som padrão'}
-                            </span>
-                          </div>
-                        </label>
+                        <div className="grid grid-cols-1 gap-2">
+                          {!selectedSource?.isScreen && (
+                            <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${audioMode === 'window' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#242b3d] bg-[#141824] hover:bg-[#1a1f30]'}`}>
+                              <input
+                                type="radio"
+                                name="audioMode"
+                                value="window"
+                                checked={audioMode === 'window'}
+                                onChange={() => setAudioMode('window')}
+                                className="mt-0.5 accent-emerald-500 w-4 h-4 cursor-pointer"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                                  Áudio Exclusivo desta Janela (Recomendado)
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                  Isola apenas o som do jogo/janela. Sem eco do Discord nem sons do Windows.
+                                </span>
+                              </div>
+                            </label>
+                          )}
+
+                          <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${audioMode === 'system' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#242b3d] bg-[#141824] hover:bg-[#1a1f30]'}`}>
+                            <input
+                              type="radio"
+                              name="audioMode"
+                              value="system"
+                              checked={audioMode === 'system'}
+                              onChange={() => setAudioMode('system')}
+                              className="mt-0.5 accent-emerald-500 w-4 h-4 cursor-pointer"
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-xs text-white font-semibold flex items-center gap-1.5">
+                                Áudio do Computador Inteiro
+                              </span>
+                              <span className="text-[10px] text-gray-400">
+                                Transmite tudo o que você escuta nos fones (jogo, Discord, músicas, etc.).
+                              </span>
+                            </div>
+                          </label>
+
+                          <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${audioMode === 'none' ? 'border-emerald-500 bg-emerald-500/10' : 'border-[#242b3d] bg-[#141824] hover:bg-[#1a1f30]'}`}>
+                            <input
+                              type="radio"
+                              name="audioMode"
+                              value="none"
+                              checked={audioMode === 'none'}
+                              onChange={() => setAudioMode('none')}
+                              className="mt-0.5 accent-emerald-500 w-4 h-4 cursor-pointer"
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-xs text-gray-400 font-semibold flex items-center gap-1.5">
+                                Sem Áudio (Mutado)
+                              </span>
+                              <span className="text-[10px] text-gray-500">
+                                Transmite apenas a imagem do jogo sem emitir som.
+                              </span>
+                            </div>
+                          </label>
+                        </div>
                       </div>
                     </div>
 
