@@ -49,5 +49,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('app:shortcut-open', handler);
     return () => ipcRenderer.removeListener('app:shortcut-open', handler);
   },
+  // VaultCast API & Deep Linking
+  getVaultCastSources: () => ipcRenderer.invoke('vaultcast:get-sources'),
+  onDeepLinkReceived: (callback) => {
+    const handler = (_event, url) => callback(url);
+    ipcRenderer.on('deep-link:received', handler);
+    return () => ipcRenderer.removeListener('deep-link:received', handler);
+  },
+  generateLiveKitToken: (params) => ipcRenderer.invoke('livekit:generate-token', params),
   isElectron: true
 });

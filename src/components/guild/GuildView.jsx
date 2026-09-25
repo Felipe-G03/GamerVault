@@ -16,15 +16,19 @@ import {
   Flame,
   Award,
   Ban,
-  AlertOctagon
+  AlertOctagon,
+  Tv,
+  Radio
 } from 'lucide-react';
 import { getGuildData } from '../../services/guildService';
+import { listenToActiveCasts } from '../../services/vaultCastService';
 import FriendVaultModal from './FriendVaultModal';
 import GameExpandedModal from '../vault/GameExpandedModal';
 
-export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }) {
+export default function GuildView({ user, profile, onGoToProfile, onAddNewGame, onOpenVaultCast }) {
   const [data, setData] = useState({ activities: [], leaderboard: [], stats: null });
   const [loading, setLoading] = useState(true);
+  const [activeCasts, setActiveCasts] = useState([]);
 
   const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'highScore', 'reviewed'
   const [rankingFilter, setRankingFilter] = useState('count'); // 'count', 'longest', 'month', 'highestScore', 'fasting'
@@ -51,6 +55,14 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
     }
     load();
   }, [user, profile]);
+
+  // Escuta transmissões ativas do VaultCast na guilda
+  useEffect(() => {
+    const unsub = listenToActiveCasts((casts) => {
+      setActiveCasts(casts || []);
+    });
+    return () => unsub();
+  }, []);
 
   // Filtra as atividades do feed
   const filteredActivities = useMemo(() => {
@@ -154,6 +166,29 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
         </div>
 
         <div className="flex items-center gap-2.5">
+          {/* BOTÃO VAULTCAST */}
+          <button
+            onClick={() => onOpenVaultCast?.()}
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border font-bold text-xs tracking-wide transition-all shadow-md active:scale-95 ${
+              activeCasts.length > 0
+                ? 'bg-rose-950/50 border-rose-500/60 text-rose-300 hover:bg-rose-900/60 hover:border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.25)]'
+                : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/50 hover:border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+            }`}
+          >
+            {activeCasts.length > 0 ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                <Radio className="w-4 h-4 text-rose-400" />
+                <span>VaultCast ({activeCasts.length} AO VIVO)</span>
+              </>
+            ) : (
+              <>
+                <Tv className="w-4 h-4 text-emerald-400" />
+                <span>VaultCast</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={onAddNewGame}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black hover:bg-gray-200 font-bold text-xs tracking-wide transition-all shadow-md active:scale-95"
@@ -170,6 +205,38 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame }
           </button>
         </div>
       </div>
+
+      {/* BANNER DE VAULTCAST AO VIVO NA GUILDA */}
+      {activeCasts.length > 0 && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/60 via-[#121522] to-emerald-950/30 border border-rose-500/40 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 animate-pulse flex-shrink-0">
+              <Radio className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-rose-500 text-white uppercase">
+                  AO VIVO NA GUILDA
+                </span>
+                <span className="text-xs text-gray-200 font-bold">
+                  {activeCasts[0].pilotName} está transmitindo "{activeCasts[0].gameTitle}"
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Transmissão aberta no VaultCast. Clique para assistir junto com os membros ou entrar na call.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onOpenVaultCast?.(activeCasts[0].id)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all shadow-lg active:scale-95 whitespace-nowrap"
+          >
+            <Tv className="w-4 h-4" />
+            <span>Assistir VaultCast</span>
+          </button>
+        </div>
+      )}
 
       {/* 3. BARRA DE FILTROS & BUSCA RÁPIDA */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">

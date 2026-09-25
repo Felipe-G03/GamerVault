@@ -1,14 +1,49 @@
-const { app, BrowserWindow, ipcMain, shell, session, dialog, Tray, Menu, nativeImage, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, session, dialog, Tray, Menu, nativeImage, globalShortcut, desktopCapturer } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const { AccessToken } = require('livekit-server-sdk');
 
 // Permite reprodução imediata de áudio/vídeo embutido sem bloqueios de gesto
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Força perfil de cores sRGB para evitar dupla saturação na captura DXGI de tela cheia
+app.commandLine.appendSwitch('force-color-profile', 'srgb');
+
+// ==========================================
+// REGISTRO DE PROTOCOLO DEEP LINK (gamervault://)
+// ==========================================
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('gamervault', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('gamervault');
+}
 
 let mainWindow;
 let tray = null;
+let pendingDeepLinkUrl = process.argv.find(arg => typeof arg === 'string' && arg.startsWith('gamervault://')) || null;
 app.isQuitting = false;
+
+// Garante instância única para interceptar cliques de deep link no Windows
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, commandLine) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+
+      // Procura URL gamervault:// nos argumentos recebidos
+      const deepLink = commandLine.find(arg => typeof arg === 'string' && arg.startsWith('gamervault://'));
+      if (deepLink) {
+        mainWindow.webContents.send('deep-link:received', deepLink);
+      }
+    }
+  });
+}
 
 // ==========================================
 // CONFIGURAÇÕES DO APLICATIVO (SETTINGS)
@@ -383,6 +418,14 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
+  // Despacha deep link inicial caso tenha iniciado via protocolo gamervault://
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (pendingDeepLinkUrl) {
+      mainWindow.webContents.send('deep-link:received', pendingDeepLinkUrl);
+      pendingDeepLinkUrl = null;
+    }
+  });
+
   // Verifica se deve iniciar minimizado na bandeja
   const isHiddenLaunch = process.argv.includes('--hidden') || (appSettings.openAtLogin && appSettings.startMinimized);
   if (isHiddenLaunch) {
@@ -604,7 +647,55 @@ function createWindow() {
     }
   });
 
-  // Qualquer link externo clicado abre diretamente no navegador do sistema operacional (Chrome, Edge, etc.)
+  // ==========================================
+  // VAULTCAST: CAPTURA NATIVA DE TELAS E JANELAS
+  // ==========================================
+  ipcMain.handle('vaultcast:get-sources', async () => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['window', 'screen'],
+        thumbnailSize: { width: 640, height: 360 },
+        fetchWindowIcons: true
+      });
+
+      return sources.map(source => ({
+        id: source.id,
+        name: source.name,
+        thumbnail: source.thumbnail.toDataURL(),
+        appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
+        isScreen: source.id.startsWith('screen:')
+      }));
+    } catch (err) {
+      console.error('Erro ao capturar fontes de tela/janela para o VaultCast:', err);
+      return [];
+    }
+  });
+
+  // Geração segura de token do LiveKit SFU
+  ipcMain.handle('livekit:generate-token', async (_event, { apiKey, apiSecret, roomName, identity, isPublisher }) => {
+    try {
+      if (!apiKey || !apiSecret || !roomName) {
+        throw new Error('Chaves do LiveKit ou nome da sala não informados.');
+      }
+      const at = new AccessToken(apiKey, apiSecret, {
+        identity: identity || 'anonymous',
+        ttl: '6h'
+      });
+      at.addGrant({
+        room: roomName,
+        roomJoin: true,
+        canPublish: Boolean(isPublisher),
+        canSubscribe: true,
+        canPublishData: true
+      });
+      const token = await at.toJwt();
+      return { success: true, token };
+    } catch (err) {
+      console.error('Erro ao gerar token do LiveKit:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
   // ==========================================
   // CONFIGURAÇÕES IPC (SETTINGS)
   // ==========================================

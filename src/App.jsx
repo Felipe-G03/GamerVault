@@ -17,6 +17,7 @@ import DiscoverView from './components/discover/DiscoverView';
 import AuthModal from './components/auth/AuthModal';
 import UpdateModal from './components/common/UpdateModal';
 import SettingsModal from './components/layout/SettingsModal';
+import VaultCastModal from './components/vaultcast/VaultCastModal';
 import StartupSplash from './components/common/StartupSplash';
 import { Loader2 } from 'lucide-react';
 
@@ -36,7 +37,11 @@ export default function App() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-  // Ouvintes de Ciclo de Vida do Electron (Bandeja / Standby / Configurações)
+  // VaultCast: Transmissão ao vivo na Guilda e Deep Linking
+  const [isVaultCastModalOpen, setIsVaultCastModalOpen] = useState(false);
+  const [vaultCastRoomId, setVaultCastRoomId] = useState(null);
+
+  // Ouvintes de Ciclo de Vida do Electron (Bandeja / Standby / Configurações / Deep Links)
   useEffect(() => {
     if (window.electronAPI) {
       // Abre o modal de configurações se chamado via menu de contexto da bandeja
@@ -60,11 +65,27 @@ export default function App() {
         setActiveTab('hub');
       });
 
+      // Ouvinte de Deep Linking clicado no Discord ou Navegador (gamervault://cast?room=XYZ)
+      const unsubDeepLink = window.electronAPI.onDeepLinkReceived?.((url) => {
+        if (typeof url === 'string' && url.startsWith('gamervault://cast')) {
+          try {
+            const urlObj = new URL(url.replace('gamervault://', 'http://gamervault.local/'));
+            const roomId = urlObj.searchParams.get('room');
+            setVaultCastRoomId(roomId);
+            setIsVaultCastModalOpen(true);
+            setActiveTab('guilda');
+          } catch (e) {
+            console.error('Erro ao interpretar deep link do VaultCast:', e);
+          }
+        }
+      });
+
       return () => {
         unsubSettings?.();
         unsubStandby?.();
         unsubResume?.();
         unsubShortcut?.();
+        unsubDeepLink?.();
       };
     }
   }, []);
@@ -274,6 +295,19 @@ export default function App() {
         <SettingsModal onClose={() => setIsSettingsModalOpen(false)} />
       )}
 
+      {/* Modal do VaultCast (Transmissão de Jogos/Janelas na Guilda) */}
+      {isVaultCastModalOpen && (
+        <VaultCastModal
+          user={user}
+          profile={profile}
+          initialRoomId={vaultCastRoomId}
+          onClose={() => {
+            setIsVaultCastModalOpen(false);
+            setVaultCastRoomId(null);
+          }}
+        />
+      )}
+
       {/* Modal de Atualização de Versão */}
       {isUpdateModalOpen && updateInfo && (
         <UpdateModal
@@ -362,6 +396,10 @@ export default function App() {
                     onAddNewGame={() => {
                       setEditingGame(null);
                       setActiveTab('adicionar');
+                    }}
+                    onOpenVaultCast={(roomId) => {
+                      setVaultCastRoomId(roomId || null);
+                      setIsVaultCastModalOpen(true);
                     }}
                   />
                 )}
