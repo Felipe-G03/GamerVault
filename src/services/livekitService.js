@@ -168,9 +168,11 @@ export async function startLiveKitBroadcast({
   // Troca de janela em tempo real via SFU
   async function updateStream(newStream) {
     const newVideo = newStream.getVideoTracks()?.[0];
-    if (newVideo && videoPub) {
+    if (newVideo && newVideo !== currentVideoTrack) {
       try {
-        await room.localParticipant.unpublishTrack(currentVideoTrack);
+        if (currentVideoTrack && videoPub) {
+          await room.localParticipant.unpublishTrack(currentVideoTrack);
+        }
         currentVideoTrack = newVideo;
         videoPub = await room.localParticipant.publishTrack(newVideo, {
           name: 'vaultcast-video',
@@ -178,6 +180,22 @@ export async function startLiveKitBroadcast({
         });
       } catch (err) {
         console.warn('Erro ao atualizar track de vídeo no LiveKit:', err);
+      }
+    }
+
+    const newAudio = newStream.getAudioTracks()?.[0];
+    if (newAudio && newAudio !== currentAudioTrack) {
+      try {
+        if (currentAudioTrack && audioPub) {
+          await room.localParticipant.unpublishTrack(currentAudioTrack);
+        }
+        currentAudioTrack = newAudio;
+        audioPub = await room.localParticipant.publishTrack(newAudio, {
+          name: 'vaultcast-audio',
+          source: Track.Source.ScreenShareAudio
+        });
+      } catch (err) {
+        console.warn('Erro ao atualizar track de áudio no LiveKit:', err);
       }
     }
   }

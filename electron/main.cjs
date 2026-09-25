@@ -648,8 +648,37 @@ function createWindow() {
   });
 
   // ==========================================
-  // VAULTCAST: CAPTURA NATIVA DE TELAS E JANELAS
+  // VAULTCAST: CAPTURA NATIVA DE TELAS, JANELAS E ÁUDIO POR PROCESSO
   // ==========================================
+  let loopbackModule = null;
+  try {
+    loopbackModule = require('loopback-capture');
+  } catch (lkErr) {
+    console.warn('Módulo loopback-capture indisponível:', lkErr);
+  }
+  let activeLoopbackCapture = null;
+
+  function getWindowPidMap() {
+    const map = new Map();
+    if (process.platform !== 'win32') return map;
+    try {
+      const { execSync } = require('child_process');
+      const stdout = execSync('chcp 65001 > nul && tasklist /v /fo csv', { encoding: 'utf-8', timeout: 4000 });
+      const lines = stdout.trim().split('\r\n');
+      for (const line of lines) {
+        const parts = line.split('","').map(s => s.replace(/^"|"$/g, ''));
+        if (parts.length >= 9) {
+          const pid = parseInt(parts[1], 10);
+          const title = parts[8];
+          if (title && title !== 'N/A' && !isNaN(pid)) {
+            map.set(title.toLowerCase().trim(), pid);
+          }
+        }
+      }
+    } catch (_) {}
+    return map;
+  }
+
   ipcMain.handle('vaultcast:get-sources', async () => {
     try {
       const sources = await desktopCapturer.getSources({
@@ -658,16 +687,75 @@ function createWindow() {
         fetchWindowIcons: true
       });
 
-      return sources.map(source => ({
-        id: source.id,
-        name: source.name,
-        thumbnail: source.thumbnail.toDataURL(),
-        appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
-        isScreen: source.id.startsWith('screen:')
-      }));
+      const pidMap = getWindowPidMap();
+
+      return sources.map(source => {
+        let pid = null;
+        if (!source.id.startsWith('screen:')) {
+          const cleanName = source.name.toLowerCase().trim();
+          if (pidMap.has(cleanName)) {
+            pid = pidMap.get(cleanName);
+          } else {
+            for (const [title, p] of pidMap.entries()) {
+              if (title.includes(cleanName) || cleanName.includes(title)) {
+                pid = p;
+                break;
+              }
+            }
+          }
+        }
+
+        return {
+          id: source.id,
+          name: source.name,
+          thumbnail: source.thumbnail.toDataURL(),
+          appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
+          isScreen: source.id.startsWith('screen:'),
+          pid
+        };
+      });
     } catch (err) {
       console.error('Erro ao capturar fontes de tela/janela para o VaultCast:', err);
       return [];
+    }
+  });
+
+  // Captura exclusiva de áudio do processo selecionado (WASAPI Process Loopback)
+  ipcMain.handle('vaultcast:start-process-audio', async (_event, { pid }) => {
+    try {
+      if (!loopbackModule) throw new Error('loopback-capture indisponível.');
+      if (!pid) throw new Error('PID do processo não informado.');
+
+      if (activeLoopbackCapture) {
+        try { activeLoopbackCapture.stop(); } catch (_) {}
+        activeLoopbackCapture = null;
+      }
+
+      const capture = new loopbackModule.LoopbackCapture();
+      activeLoopbackCapture = capture;
+
+      capture.start(Number(pid), true, (chunk) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('vaultcast:process-audio-chunk', chunk);
+        }
+      });
+
+      return { success: true };
+    } catch (err) {
+      console.error('Erro ao iniciar captura de áudio do processo:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('vaultcast:stop-process-audio', async () => {
+    try {
+      if (activeLoopbackCapture) {
+        activeLoopbackCapture.stop();
+        activeLoopbackCapture = null;
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
     }
   });
 

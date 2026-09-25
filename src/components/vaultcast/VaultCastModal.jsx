@@ -36,8 +36,7 @@ import {
   endCastSession,
   listenToActiveCasts,
   generateDiscordInvite,
-  notifyDiscordLiveStart,
-  notifyDiscordLiveEnd
+  notifyDiscordLiveStart
 } from '../../services/vaultCastService';
 import {
   startBroadcastingWebRTC,
@@ -48,6 +47,10 @@ import {
   startLiveKitBroadcast,
   connectLiveKitViewer
 } from '../../services/livekitService';
+import {
+  createProcessAudioTrack,
+  stopProcessAudioTrack
+} from '../../services/vaultCastAudioService';
 
 export default function VaultCastModal({
   user,
@@ -72,6 +75,7 @@ export default function VaultCastModal({
 
   // Estado da Transmissão Local
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [isStartingBroadcast, setIsStartingBroadcast] = useState(false);
   const [castId, setCastId] = useState(null);
   const [broadcastStartTime, setBroadcastStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState('00:00:00');
@@ -243,15 +247,33 @@ export default function VaultCastModal({
   }, [isBroadcasting, isMinimized]);
 
   // Inicia captura e transmissão local
+  // Inicia captura e transmissão local
   const handleStartBroadcast = async () => {
-    if (!selectedSource) return;
+    if (isBroadcasting || isStartingBroadcast) return;
+    if (!selectedSource) {
+      alert('Selecione uma tela ou janela para transmitir.');
+      return;
+    }
+
+    setIsStartingBroadcast(true);
 
     try {
       const height = resolution === '1080' ? 1080 : 720;
       const width = resolution === '1080' ? 1920 : 1280;
 
+      // 1. Se for uma janela com PID identificado, ativa o isolamento de áudio por processo (WASAPI Process Loopback)
+      let processAudio = null;
+      if (captureAudio && !selectedSource?.isScreen && selectedSource?.pid) {
+        try {
+          processAudio = await createProcessAudioTrack(selectedSource.pid);
+        } catch (pErr) {
+          console.warn('Falha no isolamento de áudio por processo, usando áudio geral:', pErr);
+        }
+      }
+
+      // Se temos áudio exclusivo do processo, desliga o desktop audio geral no getUserMedia
       const constraints = {
-        audio: captureAudio
+        audio: (!processAudio && captureAudio)
           ? {
               mandatory: {
                 chromeMediaSource: 'desktop'
@@ -276,6 +298,11 @@ export default function VaultCastModal({
         console.warn('Falha na captura com áudio desktop, alternando para vídeo puro:', audioErr);
         constraints.audio = false;
         stream = await navigator.mediaDevices.getUserMedia(constraints);
+      }
+
+      // Se obtivemos o áudio exclusivo do processo, anexa ao stream
+      if (processAudio?.track) {
+        stream.addTrack(processAudio.track);
       }
 
       streamRef.current = stream;
@@ -339,7 +366,7 @@ export default function VaultCastModal({
         livekitUrl: engine === 'livekit' ? currentLk?.url : null
       });
 
-      // Dispara anúncio automático no Discord da guilda via Webhook (sem emojis)
+      // Dispara anúncio automático no Discord da guilda via Webhook (sem emojis e sem repetições)
       notifyDiscordLiveStart({
         castId: newCastId,
         pilotName: profile?.nickname || 'Piloto',
@@ -350,10 +377,12 @@ export default function VaultCastModal({
     } catch (err) {
       console.error('Falha ao iniciar transmissão:', err);
       alert('Não foi possível capturar esta janela. Verifique se o jogo/janela não está minimizado.');
+    } finally {
+      setIsStartingBroadcast(false);
     }
   };
 
-  // Troca de janela em tempo real sem derrubar a live
+  // Troca de janela em tempo real sem derrubar a live e sem cortar o áudio
   const handleSwitchSource = async (newSource) => {
     if (!newSource) return;
 
@@ -361,14 +390,9 @@ export default function VaultCastModal({
       const height = resolution === '1080' ? 1080 : 720;
       const width = resolution === '1080' ? 1920 : 1280;
 
-      const constraints = {
-        audio: captureAudio
-          ? {
-              mandatory: {
-                chromeMediaSource: 'desktop'
-              }
-            }
-          : false,
+      // 1. Obtém a nova fonte de vídeo da janela desejada
+      const videoConstraints = {
+        audio: false,
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
@@ -380,19 +404,51 @@ export default function VaultCastModal({
         }
       };
 
-      let newStream;
-      try {
-        newStream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (audioErr) {
-        console.warn('Falha no áudio ao trocar janela, usando apenas vídeo:', audioErr);
-        constraints.audio = false;
-        newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const newStream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+
+      // 2. Se a nova janela tiver PID, troca para o áudio exclusivo do novo processo
+      let newProcessAudio = null;
+      if (captureAudio && !newSource?.isScreen && newSource?.pid) {
+        try {
+          stopProcessAudioTrack();
+          newProcessAudio = await createProcessAudioTrack(newSource.pid);
+        } catch (pErr) {
+          console.warn('Falha ao obter áudio do novo processo:', pErr);
+        }
       }
 
-      // Encerra faixas antigas
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+      if (newProcessAudio?.track) {
+        newStream.addTrack(newProcessAudio.track);
+      } else {
+        // Fallback: Preserva o áudio atual se for compatível
+        const existingAudioTrack = streamRef.current?.getAudioTracks()?.[0];
+        if (captureAudio && existingAudioTrack && existingAudioTrack.readyState === 'live') {
+          newStream.addTrack(existingAudioTrack);
+        } else if (captureAudio) {
+          try {
+            const audioStream = await navigator.mediaDevices.getUserMedia({
+              audio: { mandatory: { chromeMediaSource: 'desktop' } },
+              video: false
+            });
+            const newAudioTrack = audioStream.getAudioTracks()?.[0];
+            if (newAudioTrack) newStream.addTrack(newAudioTrack);
+          } catch (audioErr) {
+            console.warn('Falha ao obter nova faixa de áudio desktop:', audioErr);
+          }
+        }
       }
+
+      // 3. Para APENAS a faixa antiga de vídeo (o áudio continua tocando sem corte)
+      const oldVideoTracks = streamRef.current?.getVideoTracks() || [];
+      oldVideoTracks.forEach(t => t.stop());
+
+      // Se havia uma faixa de áudio antiga que não foi reaproveitada, encerra-a
+      const oldAudioTracks = streamRef.current?.getAudioTracks() || [];
+      oldAudioTracks.forEach(t => {
+        if (!newStream.getAudioTracks().includes(t)) {
+          t.stop();
+        }
+      });
 
       streamRef.current = newStream;
       setSelectedSource(newSource);
@@ -417,10 +473,10 @@ export default function VaultCastModal({
         applyPreset('original');
       }
 
-      // Substitui as faixas de vídeo em tempo real para todos os amigos conectados
+      // 4. Substitui as faixas em tempo real para todos os amigos conectados (SFU ou P2P)
       broadcasterControllerRef.current?.updateStream(newStream);
 
-      // Atualiza o Firestore com o novo título de jogo
+      // 5. Atualiza o Firestore com o novo título de jogo
       if (castId) {
         const currentLk = getLiveKitConfig();
         await registerCastSession({
@@ -440,8 +496,10 @@ export default function VaultCastModal({
     }
   };
 
-  // Encerra transmissão
+  // Encerra transmissão local
   const handleStopBroadcast = async () => {
+    stopProcessAudioTrack();
+
     if (broadcasterControllerRef.current) {
       broadcasterControllerRef.current.stop();
       broadcasterControllerRef.current = null;
@@ -458,11 +516,6 @@ export default function VaultCastModal({
     }
 
     if (castId) {
-      notifyDiscordLiveEnd({
-        pilotName: profile?.nickname || 'Piloto',
-        gameTitle: streamTitle || selectedSource?.name,
-        duration: elapsedTime !== '00:00:00' ? elapsedTime : null
-      }).catch(console.warn);
       await endCastSession(castId);
     }
 
@@ -1169,18 +1222,31 @@ export default function VaultCastModal({
                       {/* OPÇÃO DE ÁUDIO */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-gray-300">
-                          Áudio:
+                          Áudio da Transmissão:
                         </label>
-                        <label className="flex items-center gap-2.5 p-2 bg-[#141824] border border-[#242b3d] rounded-xl cursor-pointer hover:bg-[#1a1f30] transition-colors">
+                        <label className="flex items-start gap-2.5 p-2.5 bg-[#141824] border border-[#242b3d] rounded-xl cursor-pointer hover:bg-[#1a1f30] transition-colors">
                           <input
                             type="checkbox"
                             checked={captureAudio}
                             onChange={(e) => setCaptureAudio(e.target.checked)}
-                            className="rounded accent-emerald-500 w-4 h-4 cursor-pointer"
+                            className="mt-0.5 rounded accent-emerald-500 w-4 h-4 cursor-pointer"
                           />
-                          <span className="text-xs text-gray-300 font-medium">
-                            Áudio do Sistema / Jogo
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                              {selectedSource?.isScreen
+                                ? 'Som do Computador (Tela Inteira)'
+                                : selectedSource?.pid
+                                  ? 'Áudio Exclusivo desta Janela (Sem eco do Discord)'
+                                  : 'Áudio do Sistema / Jogo'}
+                            </span>
+                            <span className="text-[10px] text-gray-400">
+                              {selectedSource?.isScreen
+                                ? 'Transmite todos os sons do sistema'
+                                : selectedSource?.pid
+                                  ? 'Isolado por processo: seus amigos não ouvem a si mesmos'
+                                  : 'Captura o som padrão'}
+                            </span>
+                          </div>
                         </label>
                       </div>
                     </div>
@@ -1189,11 +1255,11 @@ export default function VaultCastModal({
                     <div className="pt-2 flex justify-end">
                       <button
                         onClick={handleStartBroadcast}
-                        disabled={!selectedSource}
+                        disabled={!selectedSource || isStartingBroadcast}
                         className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-gamer font-bold text-sm tracking-wide transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                       >
-                        <Play className="w-4 h-4 fill-current" />
-                        <span>Iniciar VaultCast Agora</span>
+                        <Play className={`w-4 h-4 fill-current ${isStartingBroadcast ? 'animate-spin' : ''}`} />
+                        <span>{isStartingBroadcast ? 'Iniciando Live...' : 'Iniciar VaultCast Agora'}</span>
                       </button>
                     </div>
                   </div>

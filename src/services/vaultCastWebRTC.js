@@ -147,18 +147,26 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
     notifyCount();
   }
 
-  // Permite substituir a track de vídeo dinamicamente ao trocar de janela
+  // Permite substituir as tracks de vídeo e áudio dinamicamente ao trocar de janela
   function updateStream(newStream) {
     currentStream = newStream;
     const newVideoTrack = newStream.getVideoTracks()?.[0];
-    if (!newVideoTrack) return;
+    const newAudioTrack = newStream.getAudioTracks()?.[0];
 
     viewersMap.forEach(({ pc }) => {
       try {
         const senders = pc.getSenders();
-        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
-        if (videoSender) {
-          videoSender.replaceTrack(newVideoTrack).catch(console.warn);
+        if (newVideoTrack) {
+          const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+          if (videoSender && videoSender.track !== newVideoTrack) {
+            videoSender.replaceTrack(newVideoTrack).catch(console.warn);
+          }
+        }
+        if (newAudioTrack) {
+          const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+          if (audioSender && audioSender.track !== newAudioTrack) {
+            audioSender.replaceTrack(newAudioTrack).catch(console.warn);
+          }
         }
       } catch (e) {
         console.warn('Erro ao substituir track para espectador:', e);

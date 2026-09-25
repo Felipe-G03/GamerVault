@@ -99,18 +99,27 @@ Assistir no aplicativo: ${webLink}
 *(O link abrirá a live diretamente no Gamer's Vault no seu PC)*`;
 }
 
+// Cache em memória para garantir que o webhook NUNCA dispare mais de uma vez para a mesma live
+const notifiedCastIds = new Set();
+
 /**
  * Envia notificação automática estilizada para o canal do Discord via Webhook (sem emojis)
  */
 export async function notifyDiscordLiveStart({ castId, pilotName, gameTitle, resolution, fps }) {
   const webhookUrl = import.meta.env.VITE_DISCORD_WEBHOOK_URL || import.meta.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) return null;
+  if (!webhookUrl || !castId) return null;
 
-  const webLink = `https://gamer-vault-e667a.web.app/cast?room=${castId}`;
+  // Se já enviou para esta sessão de live, ignora chamadas subsequentes
+  if (notifiedCastIds.has(castId)) {
+    return true;
+  }
+  notifiedCastIds.add(castId);
+
+  const webLink = `https://gamer-vault-e667a.web.app/cast?room=${encodeURIComponent(castId)}`;
 
   const payload = {
     username: "VaultCast",
-    content: "**VaultCast** // Nova transmissão iniciada na guilda:",
+    content: "**VaultCast** // Transmissão ao vivo iniciada na guilda:",
     embeds: [
       {
         title: `${pilotName} está ao vivo`,
@@ -144,36 +153,9 @@ export async function notifyDiscordLiveStart({ castId, pilotName, gameTitle, res
 }
 
 /**
- * Envia aviso de encerramento da transmissão no Discord (sem emojis)
+ * Desativado conforme preferência: apenas avisa no Discord quando a live começa
  */
-export async function notifyDiscordLiveEnd({ pilotName, gameTitle, duration }) {
-  const webhookUrl = import.meta.env.VITE_DISCORD_WEBHOOK_URL || import.meta.env.DISCORD_WEBHOOK_URL;
-  if (!webhookUrl) return null;
-
-  const payload = {
-    username: "VaultCast",
-    embeds: [
-      {
-        title: `Transmissão encerrada: ${pilotName}`,
-        description: `A transmissão de **${gameTitle}** foi finalizada.`,
-        color: 3424072, // Neutro escuro
-        fields: duration ? [{ name: "Duração", value: duration, inline: true }] : [],
-        footer: {
-          text: "Gamer's Vault • Rede da Guilda"
-        },
-        timestamp: new Date().toISOString()
-      }
-    ]
-  };
-
-  try {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-  } catch (err) {
-    console.warn("Erro ao enviar encerramento para o Discord:", err);
-  }
+export async function notifyDiscordLiveEnd() {
+  return null;
 }
 

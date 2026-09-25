@@ -87,7 +87,7 @@
     <h1>Abrindo no Gamer's Vault</h1>
     <p>Estamos conectando você à transmissão ao vivo na guilda.</p>
     <a id="launch-btn" class="btn" href="#">Abrir Gamer's Vault</a>
-    <a class="secondary" href="https://www.dropbox.com/scl/fi/qn91m2u5rdxyogx4l2zbm/Gamer-s-Vault-Setup-2.3.0.exe?rlkey=qb23ads42mhqjv9lobvycs0g2&dl=1">Não tem o app instalado? Baixe aqui</a>
+    <a class="secondary" href="https://www.dropbox.com/scl/fi/7a32cirmri3qflxe92481/Gamer-s-Vault-Setup-2.3.3.exe?rlkey=6jwa0g7avtxfh12chyp6dcs2z&dl=1">Não tem o app instalado? Baixe a versão 2.3.3 aqui</a>
   </div>
   <script>
     const params = new URLSearchParams(window.location.search);
@@ -95,8 +95,15 @@
     if (room) {
       const deepLink = 'gamervault://cast?room=' + encodeURIComponent(room);
       document.getElementById('launch-btn').href = deepLink;
-      // Dispara o redirecionamento para o app do Windows
+      // Dispara o redirecionamento imediato para o app do Windows
       window.location.href = deepLink;
+
+      // Tenta fechar a aba automaticamente se o navegador permitir
+      setTimeout(() => {
+        try {
+          window.close();
+        } catch (_) {}
+      }, 1500);
     }
   </script>
 </body>

@@ -1,6 +1,6 @@
 {
   "name": "gamer-vault",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "type": "module",
   "description": "Seu depósito pessoal e social de jogos",
   "main": "electron/main.cjs",
@@ -34,6 +34,7 @@
     "firebase": "^11.3.1",
     "livekit-client": "^2.22.3",
     "livekit-server-sdk": "^2.19.1",
+    "loopback-capture": "^3.0.2",
     "lucide-react": "^1.16.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
