@@ -64,5 +64,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('deep-link:received', handler);
   },
   generateLiveKitToken: (params) => ipcRenderer.invoke('livekit:generate-token', params),
+  // Controle de janelas filhas popout
+  setWindowSize: (width, height) => ipcRenderer.send('window-set-size', { width, height }),
+  setAlwaysOnTop: (flag) => ipcRenderer.send('window-set-always-on-top', flag),
+  focusMainWindow: () => ipcRenderer.send('window-focus-main'),
+  closeCurrentWindow: () => ipcRenderer.send('window-close-current'),
   isElectron: true
 });

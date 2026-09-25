@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import VaultCastFloatingWindow from './VaultCastFloatingWindow';
 import {
   Tv,
   Radio,
@@ -51,6 +52,7 @@ import {
   createProcessAudioTrack,
   stopProcessAudioTrack
 } from '../../services/vaultCastAudioService';
+import { openDetachedLiveWindow } from '../../services/detachedWindowService';
 
 export default function VaultCastModal({
   user,
@@ -83,8 +85,13 @@ export default function VaultCastModal({
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Recursos de Usabilidade Solicitados:
-  // 1. Janela destacável / minimizada flutuante para navegar no Gamer's Vault
+  // 1. Janela destacável própria no Windows (Always-on-top nativo estilo princípio-e-fim-dnd)
+  const [isDetached, setIsDetached] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [detachedWindow, setDetachedWindow] = useState(null);
+  const detachedWindowRef = useRef(null);
+  const syncChannelRef = useRef(null);
+
   // 2. Troca de janela em tempo real sem encerrar a live
   const [isSwitchingSource, setIsSwitchingSource] = useState(false);
   // 3. Monitor de áudio (retorno) - mutado por padrão para evitar eco/microfonia
@@ -133,7 +140,7 @@ export default function VaultCastModal({
 
   // Lado do Espectador: Conecta via WebRTC P2P ou LiveKit SFU à transmissão do amigo selecionado
   useEffect(() => {
-    if (!watchingCast || activeTab !== 'guild') {
+    if (!watchingCast) {
       if (viewerControllerRef.current) {
         viewerControllerRef.current.disconnect?.();
         viewerControllerRef.current = null;
@@ -179,7 +186,7 @@ export default function VaultCastModal({
       setRemoteStream(null);
       setViewerConnectionState('idle');
     };
-  }, [watchingCast, activeTab, user]);
+  }, [watchingCast, user]);
 
   // Carrega fontes de telas/janelas do Electron
   const loadSources = async () => {
@@ -214,6 +221,7 @@ export default function VaultCastModal({
         if (found) {
           setWatchingCast(found);
           setActiveTab('guild');
+          setIsMinimized(false);
         }
       }
     });
@@ -531,17 +539,148 @@ export default function VaultCastModal({
     setElapsedTime('00:00:00');
   };
 
-  // Garante que o stream seja limpo ao fechar modal
-  const handleClose = () => {
-    if (isBroadcasting) {
-      if (confirm('A transmissão do VaultCast está ativa. Deseja encerrar a live ou apenas minimizar no canto da tela? Clique OK para encerrar ou Cancelar para continuar.')) {
-        handleStopBroadcast();
-        onClose();
+  // Destaca a live para uma janela própria nativa do Windows (Always-on-Top estilo princípio-e-fim-dnd)
+  const handleDetachWindow = () => {
+    try {
+      // Se a janela já estiver aberta, foca nela
+      if (detachedWindowRef.current && !detachedWindowRef.current.closed) {
+        detachedWindowRef.current.focus();
+        return;
       }
-    } else {
-      onClose();
+
+      const mode = isBroadcasting ? 'broadcaster' : 'viewer';
+      const stream = isBroadcasting ? streamRef.current : remoteStream;
+
+      // Disponibiliza streams e metadados na janela principal para a janela filha acessar via window.opener
+      window.__VAULTCAST_STREAM__ = stream;
+      window.__VAULTCAST_DATA__ = {
+        mode,
+        stream,
+        streamTitle: streamTitle || selectedSource?.name || 'Gameplay',
+        pilotName: isBroadcasting ? (profile?.nickname || 'Piloto') : (watchingCast?.pilotName || 'Amigo'),
+        castId: isBroadcasting ? castId : watchingCast?.castId,
+        elapsedTime,
+        viewerCount,
+        isBroadcasting,
+        watchingCast,
+        videoFilterStyle
+      };
+
+      const popoutUrl = `${window.location.origin}${window.location.pathname}?popout=vaultcast&mode=${mode}&t=${Date.now()}`;
+      
+      const popWin = window.open(
+        popoutUrl,
+        'VaultCast_Live_Detached',
+        'width=720,height=480,menubar=no,toolbar=no,resizable=yes'
+      );
+
+      if (popWin) {
+        detachedWindowRef.current = popWin;
+        setIsDetached(true);
+        setIsMinimized(false);
+      }
+    } catch (err) {
+      console.error('Erro ao abrir janela popout do VaultCast:', err);
     }
   };
+
+  // Garante que o stream seja limpo ao fechar modal ou minimiza para janela própria destacada
+  const handleClose = async () => {
+    if (isBroadcasting) {
+      if (confirm('A transmissão do VaultCast está ativa. Deseja encerrar a live ou manter aberta em uma janela destacada no Windows? Clique OK para encerrar ou Cancelar para manter destacada.')) {
+        handleStopBroadcast();
+        try {
+          syncChannelRef.current?.postMessage({ type: 'BROADCAST_ENDED' });
+        } catch (_) {}
+        if (detachedWindowRef.current && !detachedWindowRef.current.closed) {
+          detachedWindowRef.current.close();
+        }
+        onClose();
+      } else {
+        handleDetachWindow();
+      }
+      return;
+    }
+    if (watchingCast) {
+      handleDetachWindow();
+      return;
+    }
+    if (detachedWindowRef.current && !detachedWindowRef.current.closed) {
+      detachedWindowRef.current.close();
+    }
+    onClose();
+  };
+
+  // Sincronização bidirecional em tempo real com a janela destacada do Windows
+  useEffect(() => {
+    let channel = null;
+    try {
+      channel = new BroadcastChannel('vaultcast_sync');
+      syncChannelRef.current = channel;
+
+      channel.onmessage = (event) => {
+        const { type, payload } = event.data || {};
+        if (type === 'RESTORE_TO_APP') {
+          setIsDetached(false);
+          setIsMinimized(false);
+          if (window.electronAPI?.focusMainWindow) {
+            window.electronAPI.focusMainWindow();
+          }
+        } else if (type === 'STOP_BROADCAST') {
+          setIsDetached(false);
+          setIsMinimized(false);
+          handleStopBroadcast();
+        } else if (type === 'STOP_WATCHING') {
+          setIsDetached(false);
+          setIsMinimized(false);
+          setWatchingCast(null);
+        } else if (type === 'SWITCH_SOURCE') {
+          setIsDetached(false);
+          setIsMinimized(false);
+          setIsSwitchingSource(true);
+          loadSources();
+          if (window.electronAPI?.focusMainWindow) {
+            window.electronAPI.focusMainWindow();
+          }
+        } else if (type === 'STANDALONE_CLOSED') {
+          setIsDetached(false);
+        } else if (type === 'STANDALONE_READY') {
+          channel.postMessage({
+            type: 'TICK',
+            payload: {
+              elapsedTime,
+              viewerCount,
+              streamTitle: streamTitle || selectedSource?.name
+            }
+          });
+        }
+      };
+    } catch (err) {
+      console.warn('BroadcastChannel indisponível:', err);
+    }
+
+    return () => {
+      try {
+        channel?.close();
+      } catch (_) {}
+    };
+  }, [elapsedTime, viewerCount, streamTitle, selectedSource]);
+
+  // Sincroniza periodicamente tempo e contagem de espectadores com a janela destacada
+  useEffect(() => {
+    if (isDetached && syncChannelRef.current) {
+      try {
+        syncChannelRef.current.postMessage({
+          type: 'TICK',
+          payload: {
+            elapsedTime,
+            viewerCount,
+            streamTitle: streamTitle || selectedSource?.name
+          }
+        });
+      } catch (_) {}
+    }
+  }, [isDetached, elapsedTime, viewerCount, streamTitle, selectedSource]);
 
   // Copia convite formatado do Discord
   const handleCopyDiscordInvite = () => {
@@ -572,106 +711,124 @@ export default function VaultCastModal({
   );
 
   // ========================================================
-  // MODO 1: WIDGET FLUTUANTE MINIMIZADO (PICTURE-IN-PICTURE)
-  // Permite mexer normalmente em todo o Gamer's Vault sem fechar a live
+  // MODO 1: JANELA DESTACADA NATIVA NO WINDOWS (POPOUT)
+  // Permite navegar livremente pelo Gamer's Vault sem fechar a live
   // ========================================================
-  if (isMinimized && isBroadcasting) {
+  if (isDetached && (isBroadcasting || watchingCast)) {
     return createPortal(
-      <div className="fixed bottom-6 right-6 z-[9998] w-80 sm:w-96 rounded-2xl bg-[#0b0d14]/95 border border-[#232738] shadow-[0_20px_50px_rgba(0,0,0,0.9),_0_0_25px_rgba(16,185,129,0.25)] backdrop-blur-xl text-white select-none overflow-hidden animate-fadeIn">
-        {/* Top Header do Mini Player */}
-        <div className="px-3.5 py-2.5 bg-[#0e111a] border-b border-[#1c2030] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-            <span className="text-[11px] font-gamer font-bold text-rose-400">
-              VaultCast AO VIVO
-            </span>
-            <span className="text-[10px] font-mono text-gray-400">({elapsedTime})</span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsMinimized(false)}
-              title="Expandir VaultCast para Tela Cheia"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#1a1e2c] transition-colors"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleClose}
-              title="Encerrar Transmissão"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-[#1a1e2c] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[#0c0f18]/95 border border-emerald-500/40 shadow-2xl backdrop-blur-md animate-fadeIn">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+          <span className="text-xs font-bold text-white">
+            {isBroadcasting ? 'Live Destacada no Windows' : `Assistindo ${watchingCast?.pilotName || 'Amigo'}`}
+          </span>
+          <span className="text-[11px] font-mono text-gray-400">({elapsedTime})</span>
         </div>
 
-        {/* Mini Preview de Vídeo */}
-        <div className="relative aspect-video w-full bg-black overflow-hidden flex items-center justify-center">
-          <video
-            ref={(el) => {
-              localVideoRef.current = el;
-              if (el && streamRef.current && el.srcObject !== streamRef.current) {
-                el.srcObject = streamRef.current;
-                el.play().catch(e => console.warn('Erro ao dar play no mini preview:', e));
-              }
-            }}
-            autoPlay
-            playsInline
-            muted={!monitorAudio}
-            style={{ filter: videoFilterStyle }}
-            className="w-full h-full object-contain"
-          />
-
-          <div className="absolute bottom-2 left-2 max-w-[80%] truncate px-2 py-0.5 rounded bg-black/80 text-[10px] font-semibold text-gray-200">
-            {streamTitle || selectedSource?.name}
-          </div>
-        </div>
-
-        {/* Controles do Mini Player */}
-        <div className="p-2.5 bg-[#0e111a] border-t border-[#1c2030] flex items-center justify-between gap-1.5">
-          <button
-            onClick={handleCopyDiscordInvite}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white text-[11px] font-bold transition-all shadow"
-          >
-            {copiedDiscord ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedDiscord ? 'Copiado!' : 'Discord'}</span>
-          </button>
-
+        <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              setIsMinimized(false);
-              setIsSwitchingSource(true);
-              loadSources();
+              setIsDetached(false);
+              try {
+                if (detachedWindowRef.current && !detachedWindowRef.current.closed) {
+                  detachedWindowRef.current.close();
+                }
+              } catch (_) {}
             }}
-            className="p-2 rounded-lg bg-[#141824] hover:bg-[#1c2233] border border-[#242b3d] text-gray-300 hover:text-white transition-colors"
-            title="Trocar Janela Transmitida"
+            className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
           >
-            <ArrowRightLeft className="w-4 h-4 text-cyan-400" />
+            Voltar para o App
           </button>
-
           <button
-            onClick={() => setMonitorAudio(!monitorAudio)}
-            className={`p-2 rounded-lg border transition-colors ${
-              monitorAudio
-                ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-400'
-                : 'bg-[#141824] border-[#242b3d] text-gray-400 hover:text-white'
-            }`}
-            title={monitorAudio ? 'Mutar Retorno' : 'Ouvir Retorno de Áudio'}
+            onClick={() => {
+              if (isBroadcasting) handleStopBroadcast();
+              else setWatchingCast(null);
+              setIsDetached(false);
+              try {
+                if (detachedWindowRef.current && !detachedWindowRef.current.closed) {
+                  detachedWindowRef.current.close();
+                }
+              } catch (_) {}
+            }}
+            className="p-1 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+            title="Encerrar"
           >
-            {monitorAudio ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </button>
-
-          <button
-            onClick={handleStopBroadcast}
-            className="p-2 rounded-lg bg-rose-600/20 hover:bg-rose-600 border border-rose-500/50 text-rose-300 hover:text-white transition-all"
-            title="Encerrar Transmissão"
-          >
-            <Square className="w-4 h-4 fill-current" />
+            <Square className="w-3.5 h-3.5 fill-current" />
           </button>
         </div>
       </div>,
       document.body
+    );
+  }
+  if (isMinimized && (isBroadcasting || watchingCast)) {
+    const isDetachedActive = !!(detachedWindow && !detachedWindow.closed);
+    const portalTarget = isDetachedActive ? detachedWindow.document.body : document.body;
+
+    return createPortal(
+      <VaultCastFloatingWindow
+        isDetached={isDetachedActive}
+        detachedWindow={detachedWindow}
+        mode={isBroadcasting ? 'broadcaster' : 'viewer'}
+        stream={isBroadcasting ? streamRef.current : remoteStream}
+        isBroadcasting={isBroadcasting}
+        watchingCast={watchingCast}
+        elapsedTime={elapsedTime}
+        viewerCount={viewerCount}
+        selectedSource={selectedSource}
+        streamTitle={streamTitle}
+        videoFilterStyle={videoFilterStyle}
+        monitorAudio={monitorAudio}
+        onToggleMonitorAudio={() => setMonitorAudio(!monitorAudio)}
+        onCopyDiscord={handleCopyDiscordInvite}
+        copiedDiscord={copiedDiscord}
+        onCopyDirectLink={handleCopyDirectLink}
+        copiedLink={copiedLink}
+        onSwitchSource={() => {
+          if (detachedWindow && !detachedWindow.closed) {
+            detachedWindow.close();
+            setDetachedWindow(null);
+          }
+          setIsMinimized(false);
+          setIsSwitchingSource(true);
+          loadSources();
+        }}
+        onStopBroadcast={() => {
+          handleStopBroadcast();
+          if (detachedWindow && !detachedWindow.closed) {
+            detachedWindow.close();
+            setDetachedWindow(null);
+          }
+        }}
+        onStopWatching={() => {
+          setWatchingCast(null);
+          if (detachedWindow && !detachedWindow.closed) {
+            detachedWindow.close();
+            setDetachedWindow(null);
+          }
+        }}
+        onExpandModal={() => {
+          if (detachedWindow && !detachedWindow.closed) {
+            detachedWindow.close();
+            setDetachedWindow(null);
+          }
+          setIsMinimized(false);
+        }}
+        onClose={() => {
+          if (detachedWindow && !detachedWindow.closed) {
+            detachedWindow.close();
+            setDetachedWindow(null);
+          }
+          setIsMinimized(false);
+          if (isBroadcasting) {
+            handleStopBroadcast();
+          }
+          if (watchingCast) {
+            setWatchingCast(null);
+          }
+          onClose();
+        }}
+      />,
+      portalTarget
     );
   }
 
@@ -740,15 +897,15 @@ export default function VaultCastModal({
               </button>
             </div>
 
-            {/* BOTÃO MINIMIZAR / DESTACAR */}
-            {isBroadcasting && (
+            {/* BOTÃO DESTACAR EM JANELA DO WINDOWS */}
+            {(isBroadcasting || watchingCast) && (
               <button
-                onClick={() => setIsMinimized(true)}
-                title="Minimizar para card flutuante (Permite mexer no Gamer's Vault)"
-                className="p-2 rounded-xl text-gray-400 hover:text-emerald-400 hover:bg-[#1a1e2c] border border-transparent hover:border-gray-700 transition-colors flex items-center gap-1 text-xs"
+                onClick={handleDetachWindow}
+                title="Destacar a live para uma janela própria no Windows (Always-On-Top, redimensionável)"
+                className="px-3 py-1.5 rounded-xl text-emerald-400 bg-emerald-950/60 hover:bg-emerald-500 hover:text-black border border-emerald-500/50 transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm active:scale-95 cursor-pointer"
               >
-                <Minimize2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Minimizar</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Destacar Janela</span>
               </button>
             )}
 
@@ -901,7 +1058,7 @@ export default function VaultCastModal({
                           setIsSwitchingSource(prev => !prev);
                           loadSources();
                         }}
-                        className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#1c2030] hover:bg-[#252b40] border border-cyan-500/40 text-xs font-semibold text-cyan-300 hover:text-white transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#1c2030] hover:bg-[#252b40] border border-cyan-500/40 text-xs font-semibold text-cyan-300 hover:text-white transition-colors cursor-pointer"
                         title="Trocar janela sem derrubar a live"
                       >
                         <ArrowRightLeft className="w-3.5 h-3.5" />
@@ -1340,26 +1497,46 @@ export default function VaultCastModal({
                         </span>
                       </div>
 
-                      <button
-                        onClick={() => setWatchingCast(null)}
-                        title="Encerrar visualização e desconectar"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 border border-rose-500/50 text-rose-300 hover:text-white text-xs font-bold transition-all shadow-sm active:scale-95"
-                      >
-                        <Square className="w-3 h-3 fill-current" />
-                        <span>Parar de Assistir</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleDetachWindow}
+                          title="Destacar live para uma janela própria no Windows (Always-On-Top)"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Destacar Janela</span>
+                        </button>
+
+                        <button
+                          onClick={() => setWatchingCast(null)}
+                          title="Encerrar visualização e desconectar"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 border border-rose-500/50 text-rose-300 hover:text-white text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                        >
+                          <Square className="w-3 h-3 fill-current" />
+                          <span>Parar de Assistir</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
                   <div className="relative aspect-video w-full rounded-2xl bg-black border border-[#2d334a] overflow-hidden shadow-2xl flex items-center justify-center group">
-                    {/* Botão rápido para fechar a live flutuando no topo direito do vídeo */}
-                    <button
-                      onClick={() => setWatchingCast(null)}
-                      title="Parar de assistir e fechar player"
-                      className="absolute top-4 right-4 z-20 p-2 rounded-xl bg-black/80 hover:bg-rose-600 border border-gray-700/80 hover:border-rose-500 text-gray-300 hover:text-white backdrop-blur-md transition-all shadow-lg"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    {/* Botões rápidos flutuando no topo direito do vídeo */}
+                    <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+                      <button
+                        onClick={handleDetachWindow}
+                        title="Destacar para janela própria no Windows"
+                        className="p-2 rounded-xl bg-black/80 hover:bg-emerald-500 hover:text-black border border-gray-700/80 hover:border-emerald-400 text-gray-300 backdrop-blur-md transition-all shadow-lg cursor-pointer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setWatchingCast(null)}
+                        title="Parar de assistir e fechar player"
+                        className="p-2 rounded-xl bg-black/80 hover:bg-rose-600 border border-gray-700/80 hover:border-rose-500 text-gray-300 hover:text-white backdrop-blur-md transition-all shadow-lg cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
 
                     {remoteStream ? (
                       <video

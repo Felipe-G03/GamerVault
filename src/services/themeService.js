@@ -31,6 +31,38 @@ export const THEMES = {
       '--accent-subtle': 'rgba(16, 185, 129, 0.18)'
     }
   },
+  obsidian: {
+    id: 'obsidian',
+    name: 'Obsidian Crimson',
+    desc: 'Preto Puro #0A0A0A & Carmesim Marcante',
+    color: '#ef4444',
+    dotClass: 'bg-[#ef4444]',
+    vars: {
+      '--bg-primary': '#0a0a0a',
+      '--surface-low': '#111111',
+      '--surface-low-rgb': '17, 17, 17',
+      '--surface-default': '#161616',
+      '--surface-default-rgb': '22, 22, 22',
+      '--surface-container': '#1c1c1c',
+      '--surface-container-rgb': '28, 28, 28',
+      '--surface-high': '#242424',
+      '--surface-high-rgb': '36, 36, 36',
+      '--surface-higher': '#303030',
+      '--surface-higher-rgb': '48, 48, 48',
+      '--border-default': '#2c2c2c',
+      '--border-default-rgb': '44, 44, 44',
+      '--border-subtle': '#1c1c1c',
+      '--border-subtle-rgb': '28, 28, 28',
+      '--border-bright': '#ef4444',
+      '--border-bright-rgb': '239, 68, 68',
+      '--accent-primary': '#ef4444',
+      '--accent-rgb': '239, 68, 68',
+      '--accent-bright': '#f87171',
+      '--accent-bright-rgb': '248, 113, 113',
+      '--accent-glow': 'rgba(239, 68, 68, 0.35)',
+      '--accent-subtle': 'rgba(239, 68, 68, 0.18)'
+    }
+  },
   cyan: {
     id: 'cyan',
     name: 'Electric Cyan',
@@ -130,7 +162,7 @@ export const THEMES = {
   crimson: {
     id: 'crimson',
     name: 'Blood Crimson',
-    desc: 'Vulcânico & Carmesim Sangue',
+    desc: 'Vulcânico & Carmesim Sangue Profundo',
     color: '#ef4444',
     dotClass: 'bg-[#ef4444]',
     vars: {
@@ -158,42 +190,220 @@ export const THEMES = {
       '--accent-glow': 'rgba(248, 113, 113, 0.35)',
       '--accent-subtle': 'rgba(239, 68, 68, 0.18)'
     }
+  },
+  silver_cyan: {
+    id: 'silver_cyan',
+    name: 'Silver Cyan',
+    desc: 'Prata Platina Clara & Ciano Elétrico',
+    color: '#22d3ee',
+    dotClass: 'bg-[#22d3ee]',
+    vars: {
+      '--bg-primary': '#1e222b',
+      '--surface-low': '#242934',
+      '--surface-low-rgb': '36, 41, 52',
+      '--surface-default': '#2c3240',
+      '--surface-default-rgb': '44, 50, 64',
+      '--surface-container': '#363e4f',
+      '--surface-container-rgb': '54, 62, 79',
+      '--surface-high': '#434d61',
+      '--surface-high-rgb': '67, 77, 97',
+      '--surface-higher': '#525d75',
+      '--surface-higher-rgb': '82, 93, 117',
+      '--border-default': '#4a546a',
+      '--border-default-rgb': '74, 84, 106',
+      '--border-subtle': '#363e4f',
+      '--border-subtle-rgb': '54, 62, 79',
+      '--border-bright': '#22d3ee',
+      '--border-bright-rgb': '34, 211, 238',
+      '--accent-primary': '#06b6d4',
+      '--accent-rgb': '6, 182, 212',
+      '--accent-bright': '#22d3ee',
+      '--accent-bright-rgb': '34, 211, 238',
+      '--accent-glow': 'rgba(34, 211, 238, 0.45)',
+      '--accent-subtle': 'rgba(6, 182, 212, 0.22)'
+    }
+  },
+  neon_rose: {
+    id: 'neon_rose',
+    name: 'Rose Matcha',
+    desc: 'Atmosfera Rosé & Detalhes em Verde Pastel',
+    color: '#f472b6',
+    dotClass: 'bg-[#f472b6]',
+    vars: {
+      '--bg-primary': '#220f1c',
+      '--surface-low': '#2b1424',
+      '--surface-low-rgb': '43, 20, 36',
+      '--surface-default': '#36192e',
+      '--surface-default-rgb': '54, 25, 46',
+      '--surface-container': '#441e3a',
+      '--surface-container-rgb': '68, 30, 58',
+      '--surface-high': '#552549',
+      '--surface-high-rgb': '85, 37, 73',
+      '--surface-higher': '#682c59',
+      '--surface-higher-rgb': '104, 44, 89',
+      '--border-default': '#6c2e5d',
+      '--border-default-rgb': '108, 46, 93',
+      '--border-subtle': '#441e3a',
+      '--border-subtle-rgb': '68, 30, 58',
+      '--border-bright': '#86efac',
+      '--border-bright-rgb': '134, 239, 172',
+      '--accent-primary': '#f472b6',
+      '--accent-rgb': '244, 114, 182',
+      '--accent-bright': '#86efac',
+      '--accent-bright-rgb': '134, 239, 172',
+      '--accent-glow': 'rgba(134, 239, 172, 0.45)',
+      '--accent-subtle': 'rgba(134, 239, 172, 0.20)'
+    }
+  },
+  oled_gold: {
+    id: 'oled_gold',
+    name: 'Midnight Gold',
+    desc: 'Preto Puro #000 OLED, Letras Brancas & Ouro',
+    color: '#facc15',
+    dotClass: 'bg-[#facc15]',
+    vars: {
+      '--bg-primary': '#000000',
+      '--surface-low': '#030303',
+      '--surface-low-rgb': '3, 3, 3',
+      '--surface-default': '#070707',
+      '--surface-default-rgb': '7, 7, 7',
+      '--surface-container': '#0d0d0d',
+      '--surface-container-rgb': '13, 13, 13',
+      '--surface-high': '#141414',
+      '--surface-high-rgb': '20, 20, 20',
+      '--surface-higher': '#1c1c1c',
+      '--surface-higher-rgb': '28, 28, 28',
+      '--border-default': '#1f1f1f',
+      '--border-default-rgb': '31, 31, 31',
+      '--border-subtle': '#0f0f0f',
+      '--border-subtle-rgb': '15, 15, 15',
+      '--border-bright': '#facc15',
+      '--border-bright-rgb': '250, 204, 21',
+      '--accent-primary': '#eab308',
+      '--accent-rgb': '234, 179, 8',
+      '--accent-bright': '#facc15',
+      '--accent-bright-rgb': '250, 204, 21',
+      '--accent-glow': 'rgba(250, 204, 21, 0.45)',
+      '--accent-subtle': 'rgba(234, 179, 8, 0.22)'
+    }
+  }
+};
+
+export const THEME_FONTS = {
+  gamer: {
+    id: 'gamer',
+    name: 'Cyber Classic',
+    desc: 'Chakra Petch & Inter (Oficial GamerVault)',
+    badge: 'OFICIAL',
+    display: "'Chakra Petch', 'Orbitron', sans-serif",
+    body: "'Inter', system-ui, sans-serif",
+    mono: "'Geist Mono', monospace"
+  },
+  syne: {
+    id: 'syne',
+    name: 'Editorial Magazine',
+    desc: 'Syne & Plus Jakarta Sans (Elegante & Expressivo)',
+    badge: 'REVISTA',
+    display: "'Syne', sans-serif",
+    body: "'Plus Jakarta Sans', system-ui, sans-serif",
+    mono: "'Space Mono', monospace"
+  },
+  grotesk: {
+    id: 'grotesk',
+    name: 'Brutalist Tech',
+    desc: 'Space Grotesk & Space Mono (Minimalista & Marcante)',
+    badge: 'TECH',
+    display: "'Space Grotesk', sans-serif",
+    body: "'Inter', system-ui, sans-serif",
+    mono: "'Space Mono', monospace"
+  },
+  jakarta: {
+    id: 'jakarta',
+    name: 'Modern Neo-Clean',
+    desc: 'Plus Jakarta Sans (Fluido, Sofisticado & Premium)',
+    badge: 'CLEAN',
+    display: "'Plus Jakarta Sans', sans-serif",
+    body: "'Plus Jakarta Sans', system-ui, sans-serif",
+    mono: "'Geist Mono', monospace"
+  },
+  outfit: {
+    id: 'outfit',
+    name: 'Neo Outfit',
+    desc: 'Outfit & Inter (Design Moderno e Imponente)',
+    badge: 'NEO',
+    display: "'Outfit', sans-serif",
+    body: "'Inter', system-ui, sans-serif",
+    mono: "'Space Mono', monospace"
   }
 };
 
 const THEME_STORAGE_KEY = 'gamervault_app_theme';
+const FONT_STORAGE_KEY = 'gamervault_app_font';
 
 export function getSavedTheme() {
   try {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'voicebox') return 'obsidian';
+    if (saved === 'consul') return 'emerald';
     if (saved && THEMES[saved]) {
       return saved;
     }
   } catch (e) {
     // LocalStorage indisponível
   }
-  return 'emerald';
+  return 'obsidian';
 }
 
-export function applyTheme(themeId) {
+export function getSavedFont() {
+  try {
+    const saved = localStorage.getItem(FONT_STORAGE_KEY);
+    if (saved && THEME_FONTS[saved]) {
+      return saved;
+    }
+  } catch (e) {}
+  return 'gamer';
+}
+
+export function applyFont(fontId) {
+  const currentFontId = fontId || getSavedFont();
+  const fontObj = THEME_FONTS[currentFontId] || THEME_FONTS.gamer;
+  const root = document.documentElement;
+
+  root.style.setProperty('--font-display', fontObj.display);
+  root.style.setProperty('--font-body', fontObj.body);
+  root.style.setProperty('--font-mono', fontObj.mono);
+  root.setAttribute('data-font', fontObj.id);
+
+  try {
+    localStorage.setItem(FONT_STORAGE_KEY, fontObj.id);
+  } catch (e) {}
+
+  window.dispatchEvent(
+    new CustomEvent('gamervault:font-changed', {
+      detail: { fontId: fontObj.id }
+    })
+  );
+
+  return fontObj.id;
+}
+
+export function applyTheme(themeId, fontId) {
   const currentThemeId = themeId || getSavedTheme();
   const theme = THEMES[currentThemeId] || THEMES.emerald;
   const root = document.documentElement;
 
-  // Limpa qualquer resquício de light mode se houver no localStorage
-  try {
-    localStorage.removeItem('gamervault_app_mode');
-  } catch (e) {}
+  // Remove qualquer resquício de estilos antigos ou atributos de teste
+  root.removeAttribute('data-style');
+  root.removeAttribute('data-theme-mode');
+  root.classList.remove('light');
+  root.classList.add('dark');
 
-  // Aplica as variáveis CSS
+  // Aplica as variáveis CSS do tema
   Object.entries(theme.vars).forEach(([prop, val]) => {
     root.style.setProperty(prop, val);
   });
 
   root.setAttribute('data-theme', theme.id);
-  root.removeAttribute('data-theme-mode');
-  root.classList.remove('light');
-  root.classList.add('dark');
 
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme.id);
@@ -201,12 +411,15 @@ export function applyTheme(themeId) {
     // LocalStorage indisponível
   }
 
-  // Notifica componentes sobre a mudança de paleta
+  // Aplica também a fonte configurada
+  applyFont(fontId || getSavedFont());
+
+  // Notifica componentes sobre a mudança de tema
   window.dispatchEvent(
     new CustomEvent('gamervault:theme-changed', {
       detail: { themeId: theme.id }
     })
   );
 
-  return { themeId: theme.id };
+  return theme.id;
 }

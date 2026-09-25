@@ -32,7 +32,7 @@
   body {
     background-color: var(--bg-primary, #040a07);
     color: #f1f5f9;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body, 'Inter', sans-serif);
     user-select: none;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.35s ease, color 0.35s ease;
@@ -57,7 +57,7 @@
 
 /* Typography Helpers */
 .font-gamer {
-  font-family: 'Chakra Petch', 'Orbitron', sans-serif;
+  font-family: var(--font-display, 'Chakra Petch', 'Orbitron', sans-serif);
 }
 
 /* Glassmorphism & Gamer Card Borders */
@@ -135,4 +135,7 @@
 .active-press:active {
   transform: scale(0.975);
 }
+
+
+
 

@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Palette, Check } from 'lucide-react';
-import { THEMES, getSavedTheme, applyTheme } from '../../services/themeService';
+import { Palette, Check, Sparkles } from 'lucide-react';
+import { 
+  THEMES, 
+  getSavedTheme, 
+  applyTheme 
+} from '../../services/themeService';
 
 export default function ThemeSelector() {
   const [currentTheme, setCurrentTheme] = useState(getSavedTheme());
@@ -9,18 +13,20 @@ export default function ThemeSelector() {
 
   // Inicializa o tema salvo ao carregar
   useEffect(() => {
-    const saved = getSavedTheme();
-    applyTheme(saved);
-    setCurrentTheme(saved);
+    const savedTheme = getSavedTheme();
+    applyTheme(savedTheme);
+    setCurrentTheme(savedTheme);
   }, []);
 
-  // Escuta alterações de tema disparadas por outros componentes
+  // Escuta alterações disparadas globalmente
   useEffect(() => {
     const handleThemeChanged = (e) => {
       if (e.detail?.themeId) setCurrentTheme(e.detail.themeId);
     };
     window.addEventListener('gamervault:theme-changed', handleThemeChanged);
-    return () => window.removeEventListener('gamervault:theme-changed', handleThemeChanged);
+    return () => {
+      window.removeEventListener('gamervault:theme-changed', handleThemeChanged);
+    };
   }, []);
 
   // Fecha dropdown ao clicar fora
@@ -37,20 +43,19 @@ export default function ThemeSelector() {
   const handleSelectTheme = (themeId) => {
     applyTheme(themeId);
     setCurrentTheme(themeId);
-    setIsOpen(false);
   };
 
-  const activeThemeObj = THEMES[currentTheme] || THEMES.emerald;
+  const activeThemeObj = THEMES[currentTheme] || THEMES.obsidian || THEMES.crimson || THEMES.emerald;
 
   return (
     <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' }}>
-      {/* Menu Suspenso de Paletas Neon */}
       <div className="relative" ref={dropdownRef}>
+        {/* Botão de Disparo */}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface hover:bg-surface-high border border-border/80 hover:border-accent-bright/50 text-gray-300 hover:text-white font-mono text-[11px] transition-all shadow-sm active:scale-95 cursor-pointer"
-          title="Alterar Paleta de Cores"
+          title="Personalizar Esquema de Cores da Interface"
         >
           <Palette className="w-3.5 h-3.5 text-accent-bright" />
           <span 
@@ -64,15 +69,23 @@ export default function ThemeSelector() {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-1.5 w-64 rounded-xl bg-surface border border-border shadow-[0_12px_35px_rgba(0,0,0,0.7)] py-1.5 z-50 animate-fadeIn font-mono text-xs backdrop-blur-md">
+          <div className="absolute right-0 mt-1.5 w-76 rounded-xl bg-surface border border-border shadow-[0_16px_40px_rgba(0,0,0,0.85)] py-2 z-50 animate-fadeIn font-mono text-xs backdrop-blur-md">
             {/* Header do Menu */}
-            <div className="px-3 py-1.5 border-b border-border/60 text-[10px] uppercase tracking-widest text-gray-400 font-bold flex items-center justify-between">
-              <span>Paleta de Cores</span>
-              <span className="text-accent-bright font-normal">v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.1.5'}</span>
+            <div className="px-3 pb-2 border-b border-border/60 flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-accent-bright" />
+                Esquemas de Cores
+              </span>
+              <span className="text-[10px] text-accent-bright font-mono">
+                v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.3.5'}
+              </span>
             </div>
 
-            {/* Lista de Temas */}
-            <div className="p-1 space-y-1">
+            {/* Conteúdo: Paleta de Cores */}
+            <div className="p-1.5 space-y-1 max-h-80 overflow-y-auto">
+              <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-gray-400 font-bold">
+                Selecione o esquema de cores
+              </div>
               {Object.values(THEMES).map((theme) => {
                 const isSelected = currentTheme === theme.id;
                 return (
@@ -95,7 +108,9 @@ export default function ThemeSelector() {
                         }}
                       />
                       <div className="truncate">
-                        <div className="font-bold text-[11px] leading-tight truncate">{theme.name}</div>
+                        <div className="font-bold text-[11px] leading-tight truncate">
+                          <span>{theme.name}</span>
+                        </div>
                         <div className="text-[9px] text-gray-400 leading-tight truncate">{theme.desc}</div>
                       </div>
                     </div>
@@ -113,3 +128,4 @@ export default function ThemeSelector() {
     </div>
   );
 }
+

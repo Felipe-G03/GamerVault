@@ -8,6 +8,8 @@ const { AccessToken } = require('livekit-server-sdk');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // Força perfil de cores sRGB para evitar dupla saturação na captura DXGI de tela cheia
 app.commandLine.appendSwitch('force-color-profile', 'srgb');
+// Habilita Document Picture-in-Picture API nativo para janelas Always-on-Top no Windows
+app.commandLine.appendSwitch('enable-features', 'DocumentPictureInPictureAPI');
 
 // ==========================================
 // REGISTRO DE PROTOCOLO DEEP LINK (gamervault://)
@@ -410,6 +412,40 @@ function createWindow() {
     icon: getAppIconPath() || undefined
   });
 
+  // Suporte a janelas destacadas (ex: VaultCast Pop-out estilo princípio-e-fim-dnd)
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.includes('popout=')) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 720,
+          height: 480,
+          minWidth: 320,
+          minHeight: 220,
+          autoHideMenuBar: true,
+          backgroundColor: '#07090e',
+          alwaysOnTop: true,
+          frame: true,
+          title: "VaultCast AO VIVO // Gamer's Vault",
+          icon: getAppIconPath() || undefined,
+          webPreferences: {
+            preload: path.join(__dirname, 'preload.cjs'),
+            nodeIntegration: false,
+            contextIsolation: true,
+            webSecurity: false
+          }
+        }
+      };
+    }
+
+    if (url.startsWith('http:') || url.startsWith('https:')) {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    }
+
+    return { action: 'allow' };
+  });
+
   // Em modo de desenvolvimento, carrega a URL do Vite
   const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
   if (isDev) {
@@ -464,6 +500,32 @@ function createWindow() {
         app.isQuitting = true;
         mainWindow.close();
       }
+    }
+  });
+
+  // Controle de janelas filhas popout (ex: VaultCast)
+  ipcMain.on('window-set-size', (event, { width, height }) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && width && height) {
+      win.setSize(parseInt(width, 10), parseInt(height, 10));
+    }
+  });
+
+  ipcMain.on('window-set-always-on-top', (event, flag) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      win.setAlwaysOnTop(Boolean(flag));
+    }
+  });
+
+  ipcMain.on('window-focus-main', () => {
+    showAndFocusWindow();
+  });
+
+  ipcMain.on('window-close-current', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && win !== mainWindow) {
+      win.close();
     }
   });
 

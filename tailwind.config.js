@@ -39,9 +39,9 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['"Geist Mono"', 'monospace'],
-        gamer: ['"Orbitron"', '"Chakra Petch"', 'sans-serif']
+        sans: ['var(--font-body, Inter)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono, "Geist Mono")', 'monospace'],
+        gamer: ['var(--font-display, "Chakra Petch")', 'sans-serif']
       },
       boxShadow: {
         'neon-green': '0 0 15px -3px var(--accent-glow, rgba(61, 214, 155, 0.45))',
