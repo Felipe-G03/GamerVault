@@ -14,7 +14,7 @@
 
 ---
 
-## 💡 O Propósito: Por que criamos o Gamer's Vault?
+## 💡 O Propósito: Por que Gamer's Vault?
 
 A rotina da maioria dos gamers hoje é acelerada e muitas vezes cansativa. Depois de passar o dia trabalhando e estudando, o momento de lazer frequentemente se transforma em frustração: sentar na frente do PC com centenas de opções na Steam, Epic ou Game Pass, ficar rolando listas por meia hora e fechar tudo sem jogar nada.
 
@@ -31,9 +31,6 @@ O **Gamer's Vault** transforma sua relação com os jogos em algo leve, visual e
 ### 1. 📡 VaultCast: Transmissões ao Vivo na Guilda
 * **Streaming de Baixíssima Latência:** Transmissão de vídeo via WebRTC com suporte híbrido (LiveKit SFU de alta escala e Mesh P2P).
 * **Áudio Exclusivo por Processo (WASAPI Nativo):** Captura isolada do áudio do jogo através de um helper nativo Windows (`get_window_pid.exe` em Win32 C#). Seus amigos ouvem apenas o som do jogo, sem eco de chamadas do Discord, vídeos de fundo ou notificações do sistema.
-* **3 Modos Claros de Áudio:** Áudio Exclusivo da Janela, Áudio do Computador Inteiro ou Sem Áudio (Mutado).
-* **Filtros de Vídeo em Tempo Real:** Efeitos ao vivo como *Pixel Art*, *Retro CRT*, *Correção de Escuridão* e *Cinema*.
-* **Deep Linking Direto:** Convites no formato `gamervault://cast?room=XYZ` que abrem a transmissão instantaneamente no app desktop ao clicar no Discord ou navegador.
 * **Notificação Automática via Webhook:** Avisos automáticos no canal do Discord da sua guilda quando alguém começa a transmitir.
 
 ### 2. 🕹️ Gamers Hub: Lançador Unificado de Jogos
