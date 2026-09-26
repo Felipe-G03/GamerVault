@@ -19,6 +19,9 @@ import UpdateModal from './components/common/UpdateModal';
 import SettingsModal from './components/layout/SettingsModal';
 import VaultCastModal from './components/vaultcast/VaultCastModal';
 import StartupSplash from './components/common/StartupSplash';
+import LargaDeFrescuraView from './components/roulette/LargaDeFrescuraView';
+import LWorderFloatingWidget from './components/lworder/LWorderFloatingWidget';
+import { getAllHubGames } from './services/hubService';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -384,6 +387,13 @@ export default function App() {
                   />
                 )}
 
+                {activeTab === 'roleta' && (
+                  <LargaDeFrescuraView
+                    games={games}
+                    onDirectAddWishlist={handleDirectAddWishlist}
+                  />
+                )}
+
                 {activeTab === 'explorar' && (
                   <DiscoverView
                     games={games}
@@ -433,6 +443,14 @@ export default function App() {
               </div>
             )}
           </main>
+
+          {/* Widget da IA Gamer L.Worder (Canto Inferior Esquerdo) */}
+          <LWorderFloatingWidget
+            profile={profile}
+            games={games}
+            hubGames={getAllHubGames()}
+            onAddToWishlist={handleDirectAddWishlist}
+          />
         </>
       )}
     </div>

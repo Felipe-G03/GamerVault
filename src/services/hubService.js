@@ -337,3 +337,24 @@ export function updatePlatformGameMedia(platformId, gameId, { imageUrl, themeUrl
   }
 }
 
+/**
+ * Retorna todos os jogos de todas as plataformas instaladas/escaneadas no Hub
+ */
+export function getAllHubGames() {
+  const all = [];
+  HUB_PLATFORMS.forEach(p => {
+    const list = getCachedPlatformGames(p.id);
+    list.forEach(g => {
+      all.push({
+        ...g,
+        platformId: p.id,
+        platformName: p.name,
+        platformIcon: p.iconPath,
+        accentColor: p.accentColor
+      });
+    });
+  });
+  return all;
+}
+
+
