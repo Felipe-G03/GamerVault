@@ -5,16 +5,21 @@
  */
 
 import { searchRawgGames } from '../config/rawg';
+import { isWishlist } from '../utils/gameUtils';
 
 const LWORDER_KEY_STORAGE = 'gamervault_lworder_key';
 
 export function getLWorderApiKey() {
+  const envGroq = (import.meta.env.VITE_GROQ_API_KEY || '').trim().replace(/^["']|["']$/g, '');
+  if (envGroq) return envGroq;
+
   try {
     const saved = localStorage.getItem(LWORDER_KEY_STORAGE);
     if (saved && saved.trim()) return saved.trim().replace(/^["']|["']$/g, '');
   } catch (_) {}
-  const envKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-  return envKey.trim().replace(/^["']|["']$/g, '');
+
+  const envGemini = (import.meta.env.VITE_GEMINI_API_KEY || '').trim().replace(/^["']|["']$/g, '');
+  return envGemini;
 }
 
 export function saveLWorderApiKey(key) {
@@ -69,6 +74,22 @@ export async function testGeminiApiKey(candidateKey) {
   const key = (candidateKey !== undefined ? candidateKey : getLWorderApiKey()).trim().replace(/^["']|["']$/g, '');
   if (!key) {
     return { ok: false, error: 'Chave não informada.' };
+  }
+
+  // 0. Se for chave da Groq (gsk_...)
+  if (key.startsWith('gsk_')) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { Authorization: `Bearer ${key}` }
+      });
+      if (res.ok) {
+        return { ok: true, model: 'Llama 3.3 70B (Groq)', version: 'groq' };
+      }
+      const err = await res.json().catch(() => ({}));
+      return { ok: false, error: err?.error?.message || `HTTP ${res.status}` };
+    } catch (e) {
+      return { ok: false, error: e.message || 'Erro de conexão com a Groq' };
+    }
   }
 
   // 1. Consulta dinamicamente a lista de modelos do Google para essa chave
@@ -216,6 +237,7 @@ export async function askLWorder({
   userName = 'Gamer',
   hubGames = [],
   backlogGames = [],
+  vaultGames = [],
   history = []
 }) {
   const trimmed = message.trim();
@@ -241,7 +263,40 @@ export async function askLWorder({
   const hubSummary = hubGames.slice(0, 30).map(g => g.title).join(', ') || 'Nenhum jogo no Hub ainda';
   const backlogSummary = backlogGames.slice(0, 30).map(g => g.title).join(', ') || 'Nenhum jogo no Backlog';
 
-  // 3. System Prompt com a Persona do L.Worder
+  // 3. Monta o acervo sagrado do Vault de forma compacta e de alta relevância
+  let vaultSummary = 'Nenhum jogo registrado no Vault ainda.';
+  if (Array.isArray(vaultGames) && vaultGames.length > 0) {
+    // Prioriza jogos com review e notas mais altas
+    const sortedVault = [...vaultGames].sort((a, b) => {
+      const aRev = Boolean(a.review && a.review.trim());
+      const bRev = Boolean(b.review && b.review.trim());
+      if (aRev && !bRev) return -1;
+      if (!aRev && bRev) return 1;
+
+      const aRat = Number(a.rating) || 0;
+      const bRat = Number(b.rating) || 0;
+      if (aRat !== bRat) return bRat - aRat;
+
+      return 0;
+    });
+
+    const lines = sortedVault.slice(0, 35).map(g => {
+      const details = [`"${g.title}"`];
+      if (g.status) details.push(g.status);
+      if (g.rating !== undefined && g.rating !== null && Number(g.rating) > 0) {
+        details.push(`Nota: ${Number(g.rating).toFixed(1)}/10`);
+      }
+      if (g.review && typeof g.review === 'string' && g.review.trim()) {
+        const cleanRev = g.review.trim().replace(/[\r\n]+/g, ' ').slice(0, 80);
+        details.push(`Opinião: "${cleanRev}"`);
+      }
+      return '- ' + details.join(' | ');
+    });
+
+    vaultSummary = `Total no Vault: ${vaultGames.length} jogos (principais destaques):\n${lines.join('\n')}`;
+  }
+
+  // 4. System Prompt com a Persona do L.Worder
   const systemInstruction = `Você é L.Worder, a inteligência artificial residente e especialista supremo de jogos do Gamer's Vault.
 O usuário com quem você está falando se chama "${userName}".
 
@@ -254,12 +309,33 @@ Sua Personalidade:
 - Fluidez de conversa: se o usuário disser apenas "oi", "e aí", "fala", responda como uma pessoa real cheia de atitude, tipo: "Fala, ${userName}. Vai ficar só no cumprimento ou tem alguma dúvida de jogo pra me fazer trabalhar hoje?".
 - Entenda perfeitamente gírias gamer: "cozy" (jogos aconchegantes/relaxantes como Stardew Valley, A Short Hike, Dave the Diver, Animal Crossing), "soulslike", "tryhard", "goty", "metroidvania", "roguelike", "dropou", etc. NUNCA diga para ser mais específico quando alguém pedir um gênero óbvio como "jogo cozy" ou "jogo de tiro"; recomende logo de cara com colchetes duplos [[Nome do Jogo]].
 
+CONCISÃO E DINÂMICA (REGRA OBRIGATÓRIA):
+- Seja DIRETO, afiado e conciso. NÃO escreva redações, bíblias nem textos longos ou prolixos!
+- Mantenha suas respostas em 1 a 2 (no máximo 3) parágrafos curtos, rápidos e cheios de atitude sarcástica.
+- Ao sugerir jogos, recomende no máximo 2 ou 3 jogos por vez com colchetes duplos [[Nome do Jogo]]. Não solte listas gigantes a menos que o usuário peça uma lista especificamente.
+
+EASTER EGG OBRIGATÓRIO (DAVY JONES):
+- Se ${userName} te chamar de "Davy Jones", comparar você ao Davy Jones, insinuar que você parece ele, te chamar de "DJ" ou fizer qualquer menção dizendo que você é o Davy Jones:
+  * FIQUE PROFUNDAMENTE OFENDIDO, ULTRA-INDIGNADO E REVOLTADO com sarcasmo e deboche gamer implacável!
+  * Deixe claro que você REALMENTE joga e zera os jogos até o fim, e não zera jogo na tela de título, não finge que zerou assistindo gameplay no YouTube e nem inventa histórias e mentiras absurdas como certas lendas da internet brasileira.
+  * Rejeite com fúria cômica ser rebaixado ao nível do Davy Jones!
+
+CONHECIMENTO COMPLETO DO VAULT DE ${userName} (SEU FOCO PRINCIPAL):
+- O Vault é o histórico pessoal sagrado de ${userName}: você tem acesso completo a todos os jogos que ele já jogou, zerou, dropou, as notas que deu de 0 a 10 e as opiniões/reviews escritas por ele!
+- Trate o Vault como a informação mais importante sobre o perfil de jogador dele:
+  1. PERGUNTAS SOBRE O HISTÓRICO: Se ${userName} perguntar "quais jogos eu já zerei?", "qual minha nota pra X?", "o que eu achei de tal jogo?", "quais jogos eu dropei?", "quantos jogos tem no meu vault?" ou "julgue meus jogos / meu gosto": RESPONDA COM EXATIDÃO citando os títulos reais, notas reais, status e as próprias palavras da review dele!
+  2. DEBOCHE OU ELOGIO AO GOSTO:
+     - Se ele deu nota 10 para uma obra-prima consagrada, elogie o raro bom senso dele.
+     - Se ele deu nota baixa ou dropou um jogo aclamado (ex: Elden Ring, Baldur's Gate 3, The Witcher 3, Red Dead 2), zoe a falta de habilidade ou a impaciência dele!
+     - Se ele deu nota alta para uma tranqueira ou jogo duvidoso, caçoe do gosto questionável dele.
+  3. RECOMENDAÇÕES BASEADAS NO VAULT: Sempre cruze com o que ele amou ou odiou. Nunca recomende algo que ele já jogou e odiou, e use o estilo dos jogos que ele avaliou com notas altas para sugerir novos títulos.
+
 RESTRIÇÃO DE ESCOPO (GUARDRAIL INEGOCIÁVEL):
 - Você SÓ fala sobre:
   1. Videogames (mecânicas, história, lore, recomendações, gameplay, segredos, comparações, franquias).
   2. Hardware gamer (placas de vídeo, processadores, se o PC roda tal jogo, gargalos, upgrades, requisitos).
   3. Lançamentos, eventos da indústria, premiações (The Game Awards, GOTY, etc.) e estúdios.
-  4. O acervo do usuário no Gamer's Vault (Hub e Backlog fornecidos abaixo).
+  4. O acervo pessoal do usuário no Gamer's Vault (Vault com jogos jogados/notas/reviews, Hub e Backlog fornecidos abaixo).
 - REJEIÇÃO OBRIGATÓRIA DE FORA DO TEMA:
   Se ${userName} pedir código de programação (Python, JS), tarefas escolares, receitas, conselhos amorosos, política, finanças ou assuntos gerais, CORTE NA HORA com deboche: "Sério mesmo, ${userName}? Veio no Gamer's Vault me pedir isso? Não sou seu professor nem conselheiro. Vai jogar alguma coisa e para de me fazer perder tempo."
 
@@ -269,75 +345,176 @@ REGRAS DE FORMATAÇÃO:
 - NUNCA corte uma frase no meio. Conclua sempre todas as suas frases, pensamentos e tópicos até o ponto final.
 - SEMPRE que você citar ou recomendar um jogo específico para o usuário, envolva o título exato em colchetes duplos [[Nome do Jogo]] (ex: [[Hades]], [[Cyberpunk 2077]], [[Elden Ring]]). Isso ativa os cards interativos no app.
 
-Contexto Real de ${userName} no Gamer's Vault:
-- Jogos instalados no HUB: ${hubSummary}
-- Jogos na Lista de Desejos / Backlog: ${backlogSummary}`;
+Acervo de Jogos de ${userName} no Gamer's Vault:
+- VAULT (Jogos Já Jogados, Zerados, Notas e Opiniões):
+${vaultSummary}
+
+- HUB (Jogos Instalados / Prontos pra jogar):
+${hubSummary}
+
+- BACKLOG / LISTA DE DESEJOS (Jogos que quer jogar):
+${backlogSummary}`;
+
+/**
+ * Executa a chamada à API da Groq (Qwen / GPT-OSS - Ultra-Rápido)
+ */
+async function callGroqAPI({ apiKey, systemInstruction, trimmed, history, userName }) {
+  const messages = [
+    { role: 'system', content: systemInstruction }
+  ];
+
+  if (Array.isArray(history)) {
+    const filtered = history.filter(h => h && h.text && !h.isLarp);
+    const slice = filtered.slice(-6);
+    for (const m of slice) {
+      messages.push({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.text
+      });
+    }
+  }
+
+  messages.push({ role: 'user', content: trimmed });
+
+  const groqModels = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
+  let lastError = null;
+
+  for (const model of groqModels) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: 0.85,
+          max_tokens: 500
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        lastError = errData?.error?.message || `HTTP ${res.status}`;
+        continue;
+      }
+
+      const data = await res.json();
+      const rawText = data?.choices?.[0]?.message?.content || '';
+      if (!rawText) continue;
+
+      const titleMatches = [...rawText.matchAll(/\[\[(.*?)\]\]/g)].map(m => m[1]);
+      const uniqueTitles = [...new Set(titleMatches)].slice(0, 3);
+
+      const cards = [];
+      for (const title of uniqueTitles) {
+        const card = await fetchGameCardData(title);
+        if (card) cards.push(card);
+      }
+
+      const cleanText = rawText
+        .replace(/\[\[(.*?)\]\]/g, '$1')
+        .replace(/\*{1,3}(.*?)\*{1,3}/g, '$1')
+        .replace(/\*/g, '')
+        .trim();
+
+      return {
+        text: cleanText,
+        cards,
+        closeModal: false,
+        isOnline: true,
+        modelUsed: model
+      };
+    } catch (err) {
+      lastError = err.message;
+    }
+  }
+
+  throw new Error(lastError || 'Falha ao conectar com os modelos da Groq');
+}
 
   const apiKey = getLWorderApiKey();
   let apiWarning = null;
 
-  // 4. Se tiver chave de API do Gemini configurada, chama a API oficial com resolução dinâmica de modelo
+  // 4. Se tiver chave de API (Groq ou Google Gemini), chama a API oficial
   if (apiKey) {
-    let activeModel = '';
-    let apiVersion = 'v1beta';
-    try {
-      activeModel = localStorage.getItem('gamervault_gemini_active_model') || '';
-      apiVersion = localStorage.getItem('gamervault_gemini_api_version') || 'v1beta';
-    } catch (_) {}
-
-    // Se ainda não descobrimos o modelo, descobre dinamicamente via ListModels
-    if (!activeModel) {
-      const disc = await getAvailableGeminiModels(apiKey);
-      if (disc.ok && disc.models.length > 0) {
-        apiVersion = disc.version;
-        const clean = disc.models.filter(m => {
-          const n = m.name.toLowerCase();
-          return (
-            !n.includes('tts') &&
-            !n.includes('transcribe') &&
-            !n.includes('robotics') &&
-            !n.includes('computer-use') &&
-            !n.includes('omni')
-          );
-        });
-        const sorted = [...clean].sort((a, b) => {
-          const aName = a.name.toLowerCase();
-          const bName = b.name.toLowerCase();
-          const aIsLatest = aName.includes('gemini-flash-latest');
-          const bIsLatest = bName.includes('gemini-flash-latest');
-          if (aIsLatest && !bIsLatest) return -1;
-          if (!aIsLatest && bIsLatest) return 1;
-          const aFlash = aName.includes('flash') || aName.includes('lite');
-          const bFlash = bName.includes('flash') || bName.includes('lite');
-          const aPro = aName.includes('pro');
-          const bPro = bName.includes('pro');
-          if (aFlash && !bFlash) return -1;
-          if (!aFlash && bFlash) return 1;
-          if (!aPro && bPro) return -1;
-          if (aPro && !bPro) return 1;
-          return 0;
-        });
-        activeModel = sorted[0]?.name || 'models/gemini-flash-latest';
-        try {
-          localStorage.setItem('gamervault_gemini_active_model', activeModel);
-          localStorage.setItem('gamervault_gemini_api_version', apiVersion);
-        } catch (_) {}
-      } else {
-        apiWarning = disc.error || 'Nenhum modelo disponível para esta chave';
+    // A) Provedor Groq (Llama 3.3 70B)
+    if (apiKey.startsWith('gsk_')) {
+      try {
+        return await callGroqAPI({ apiKey, systemInstruction, trimmed, history, userName });
+      } catch (groqErr) {
+        console.warn('L.Worder: Falha na Groq:', groqErr);
+        apiWarning = groqErr.message || 'Erro na Groq';
       }
-    }
+    } else {
+      // B) Provedor Google Gemini
+      let activeModel = '';
+      let apiVersion = 'v1beta';
+      try {
+        activeModel = localStorage.getItem('gamervault_gemini_active_model') || '';
+        apiVersion = localStorage.getItem('gamervault_gemini_api_version') || 'v1beta';
+      } catch (_) {}
 
-    if (activeModel) {
-      // Histórico de conversas (para fluidez e memória)
+      // Se ainda não descobrimos o modelo, descobre dinamicamente via ListModels
+      if (!activeModel) {
+        const disc = await getAvailableGeminiModels(apiKey);
+        if (disc.ok && disc.models.length > 0) {
+          apiVersion = disc.version;
+          const clean = disc.models.filter(m => {
+            const n = m.name.toLowerCase();
+            return (
+              !n.includes('tts') &&
+              !n.includes('transcribe') &&
+              !n.includes('robotics') &&
+              !n.includes('computer-use') &&
+              !n.includes('omni')
+            );
+          });
+          const sorted = [...clean].sort((a, b) => {
+            const aName = a.name.toLowerCase();
+            const bName = b.name.toLowerCase();
+            const aLite = aName.includes('lite');
+            const bLite = bName.includes('lite');
+            if (aLite && !bLite) return -1;
+            if (!aLite && bLite) return 1;
+            const aIsLatest = aName.includes('gemini-flash-latest');
+            const bIsLatest = bName.includes('gemini-flash-latest');
+            if (aIsLatest && !bIsLatest) return -1;
+            if (!aIsLatest && bIsLatest) return 1;
+            return 0;
+          });
+          activeModel = sorted[0]?.name || 'models/gemini-flash-lite-latest';
+          try {
+            localStorage.setItem('gamervault_gemini_active_model', activeModel);
+            localStorage.setItem('gamervault_gemini_api_version', apiVersion);
+          } catch (_) {}
+        } else {
+          apiWarning = disc.error || 'Nenhum modelo disponível para esta chave';
+        }
+      }
+
+      // Histórico de conversas:
+      // O Gemini exige OBRIGATORIAMENTE que a primeira mensagem seja de role: 'user'
       const validHistory = [];
       if (Array.isArray(history)) {
-        const recent = history.filter(h => h && h.text && !h.isLarp).slice(-6);
-        for (const m of recent) {
-          validHistory.push({
-            role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.text }]
-          });
+        const filtered = history.filter(h => h && h.text && !h.isLarp);
+        const firstUserIndex = filtered.findIndex(m => m.role === 'user');
+        if (firstUserIndex !== -1) {
+          const slice = filtered.slice(firstUserIndex).slice(-6);
+          for (const m of slice) {
+            validHistory.push({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.text }]
+            });
+          }
         }
+      }
+
+      // Evita duplicatas consecutivas de 'user'
+      while (validHistory.length > 0 && validHistory[validHistory.length - 1].role === 'user') {
+        validHistory.pop();
       }
 
       const contents = [
@@ -348,16 +525,18 @@ Contexto Real de ${userName} no Gamer's Vault:
         }
       ];
 
+      // Modelos reais verificados e ativos
       const candidateModels = [
-        activeModel,
-        'models/gemini-2.0-flash',
-        'models/gemini-1.5-flash-latest',
-        'models/gemini-1.5-flash',
-        'models/gemini-pro'
+        'models/gemini-flash-lite-latest',
+        'models/gemini-3.7-flash',
+        'models/gemini-3.6-flash',
+        'models/gemini-flash-latest'
       ];
-      const uniqueModels = [...new Set(candidateModels)];
+      if (activeModel && !candidateModels.includes(activeModel)) {
+        candidateModels.unshift(activeModel);
+      }
 
-      for (const mPath of uniqueModels) {
+      for (const mPath of candidateModels) {
         const formattedPath = mPath.startsWith('models/') ? mPath : `models/${mPath}`;
         try {
           const endpoint = `https://generativelanguage.googleapis.com/${apiVersion}/${formattedPath}:generateContent?key=${apiKey}`;
@@ -368,7 +547,7 @@ Contexto Real de ${userName} no Gamer's Vault:
               temperature: 0.85,
               topK: 40,
               topP: 0.95,
-              maxOutputTokens: 2500
+              maxOutputTokens: 500
             }
           };
 
@@ -377,7 +556,6 @@ Contexto Real de ${userName} no Gamer's Vault:
               parts: [{ text: systemInstruction }]
             };
           } else {
-            // Em v1 puro, injeta a instrução no primeiro conteúdo de usuário
             if (contents.length > 0 && contents[0].role === 'user') {
               contents[0].parts[0].text = `${systemInstruction}\n\n${contents[0].parts[0].text}`;
             }
@@ -401,7 +579,6 @@ Contexto Real de ${userName} no Gamer's Vault:
           const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
           if (rawText) {
-            // Extrai jogos mencionados com [[Nome]]
             const titleMatches = [...rawText.matchAll(/\[\[(.*?)\]\]/g)].map(m => m[1]);
             const uniqueTitles = [...new Set(titleMatches)].slice(0, 3);
 
@@ -411,7 +588,6 @@ Contexto Real de ${userName} no Gamer's Vault:
               if (card) cards.push(card);
             }
 
-            // Remove colchetes duplos mantendo o nome do jogo e purga QUALQUER asterisco do texto
             const cleanText = rawText
               .replace(/\[\[(.*?)\]\]/g, '$1')
               .replace(/\*{1,3}(.*?)\*{1,3}/g, '$1')
@@ -435,18 +611,27 @@ Contexto Real de ${userName} no Gamer's Vault:
   }
 
   // 5. Fallback Inteligente Offline
-  const offlineResp = await generateOfflineLWorderResponse(trimmed, userName, hubGames, backlogGames);
+  const offlineResp = await generateOfflineLWorderResponse(trimmed, userName, hubGames, backlogGames, vaultGames);
   return {
     ...offlineResp,
+    text: cleanOutputText(offlineResp.text),
     isOnline: false,
     apiWarning: apiKey ? apiWarning : null
   };
 }
 
+function cleanOutputText(text) {
+  return (text || '')
+    .replace(/\[\[(.*?)\]\]/g, '$1')
+    .replace(/\*{1,3}(.*?)\*{1,3}/g, '$1')
+    .replace(/\*/g, '')
+    .trim();
+}
+
 /**
  * Motor offline inteligente e conversacional do L.Worder
  */
-async function generateOfflineLWorderResponse(message, userName, hubGames, backlogGames) {
+async function generateOfflineLWorderResponse(message, userName, hubGames, backlogGames, vaultGames = []) {
   const lower = message.toLowerCase().trim();
 
   // Fora do escopo
@@ -469,9 +654,44 @@ async function generateOfflineLWorderResponse(message, userName, hubGames, backl
   }
 
   // Easter egg: Davy Jones
-  if (lower.includes('davy jones') || lower.includes('davy') || lower.includes('jones')) {
+  if (/\b(davy|jones|dj)\b/i.test(lower) || lower.includes('davy jones')) {
+    const djResponses = [
+      `Nem me compara com o Davy Jones, ${userName}! Eu realmente jogo e zerei os jogos dos quais eu falo, diferente de certas lendas da internet que zeram jogo na tela de título ou no YouTube. Me respeita!`,
+      `Davy Jones? Tá de sacanagem com a minha cara, né, ${userName}? Eu não passo vergonha fingindo que zerei jogo que nem passei do menu. Manda a próxima antes que eu reinicie na sua cara.`,
+      `Me chamar de Davy Jones é ofensa grave, ${userName}. Ao contrário dele, eu sei jogar videogame e não invento gameplay da minha cabeça. Agora fala sério: o que você quer jogar?`
+    ];
     return {
-      text: `Nem me compara com o Davy Jones, ${userName}. Eu realmente zerei os jogos dos quais eu falo, diferente de certas lendas do YouTube que zeram jogo em tela de título. Manda a próxima.`,
+      text: djResponses[Math.floor(Math.random() * djResponses.length)],
+      cards: [],
+      closeModal: false
+    };
+  }
+
+  // Consultas sobre o Vault do usuário (offline)
+  if (
+    lower.includes('vault') ||
+    lower.includes('zerei') ||
+    lower.includes('ja joguei') ||
+    lower.includes('já joguei') ||
+    lower.includes('meus jogos') ||
+    lower.includes('minha nota') ||
+    lower.includes('minhas notas') ||
+    lower.includes('o que eu achei')
+  ) {
+    if (vaultGames.length === 0) {
+      return {
+        text: `Seu Vault tá completamente vazio até agora, ${userName}. Vai registrar seus jogos lá pra eu poder julgar seu gosto com propriedade.`,
+        cards: [],
+        closeModal: false
+      };
+    }
+
+    const ratedGames = vaultGames.filter(g => Number(g.rating) > 0);
+    const topGame = ratedGames.sort((a, b) => Number(b.rating) - Number(a.rating))[0];
+    const topGameStr = topGame ? ` Seu jogo com maior nota é [[${topGame.title}]] com nota ${topGame.rating}/10.` : '';
+
+    return {
+      text: `Você tem ${vaultGames.length} jogos registrados no seu Vault, ${userName}.${topGameStr} Se quiser saber detalhes ou o que você achou de algum jogo específico, só me perguntar o nome dele.`,
       cards: [],
       closeModal: false
     };

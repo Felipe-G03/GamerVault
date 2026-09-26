@@ -103,14 +103,16 @@ export default function LWorderChatModal({
     setIsLoading(true);
 
     try {
-      // Separa os jogos de backlog do Firestore
+      // Separa os jogos de backlog e do acervo pessoal (Vault) do Firestore
       const backlogList = games.filter(g => isWishlist(g.status));
+      const vaultList = games.filter(g => !isWishlist(g.status));
 
       const response = await askLWorder({
         message: query,
         userName,
         hubGames,
         backlogGames: backlogList,
+        vaultGames: vaultList,
         history: messages
       });
 
@@ -356,7 +358,7 @@ export default function LWorderChatModal({
                 }`}
               >
                 {typeof msg.text === 'string'
-                  ? msg.text.replace(/\*{1,3}(.*?)\*{1,3}/g, '$1').replace(/\*/g, '')
+                  ? msg.text.replace(/\[\[(.*?)\]\]/g, '$1').replace(/\*{1,3}(.*?)\*{1,3}/g, '$1').replace(/\*/g, '')
                   : msg.text}
               </div>
 
