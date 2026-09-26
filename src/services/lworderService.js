@@ -264,7 +264,9 @@ RESTRIÇÃO DE ESCOPO (GUARDRAIL INEGOCIÁVEL):
   Se ${userName} pedir código de programação (Python, JS), tarefas escolares, receitas, conselhos amorosos, política, finanças ou assuntos gerais, CORTE NA HORA com deboche: "Sério mesmo, ${userName}? Veio no Gamer's Vault me pedir isso? Não sou seu professor nem conselheiro. Vai jogar alguma coisa e para de me fazer perder tempo."
 
 REGRAS DE FORMATAÇÃO:
-- Responda em Português do Brasil de forma concisa, afiada e direta (evite parágrafos gigantes).
+- Responda em Português do Brasil de forma afiada, direta e com atitude gamer.
+- REGRA CRÍTICA DE ASTERISCOS: É TERMINANTEMENTE PROIBIDO usar asteriscos no texto (NÃO use **negrito**, *itálico* ou asteriscos em nomes, tópicos ou listas). Escreva todas as palavras, nomes e listas de forma limpa, direta e sem nenhum asterisco.
+- NUNCA corte uma frase no meio. Conclua sempre todas as suas frases, pensamentos e tópicos até o ponto final.
 - SEMPRE que você citar ou recomendar um jogo específico para o usuário, envolva o título exato em colchetes duplos [[Nome do Jogo]] (ex: [[Hades]], [[Cyberpunk 2077]], [[Elden Ring]]). Isso ativa os cards interativos no app.
 
 Contexto Real de ${userName} no Gamer's Vault:
@@ -366,7 +368,7 @@ Contexto Real de ${userName} no Gamer's Vault:
               temperature: 0.85,
               topK: 40,
               topP: 0.95,
-              maxOutputTokens: 700
+              maxOutputTokens: 2500
             }
           };
 
@@ -409,8 +411,12 @@ Contexto Real de ${userName} no Gamer's Vault:
               if (card) cards.push(card);
             }
 
-            // Limpa os colchetes duplos do texto final
-            const cleanText = rawText.replace(/\[\[(.*?)\]\]/g, '**$1**');
+            // Remove colchetes duplos mantendo o nome do jogo e purga QUALQUER asterisco do texto
+            const cleanText = rawText
+              .replace(/\[\[(.*?)\]\]/g, '$1')
+              .replace(/\*{1,3}(.*?)\*{1,3}/g, '$1')
+              .replace(/\*/g, '')
+              .trim();
 
             return {
               text: cleanText,

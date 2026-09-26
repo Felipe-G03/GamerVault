@@ -355,7 +355,9 @@ export default function LWorderChatModal({
                     : 'bg-surface-default border border-border/80 text-gray-200 rounded-bl-xs shadow-sm'
                 }`}
               >
-                {msg.text}
+                {typeof msg.text === 'string'
+                  ? msg.text.replace(/\*{1,3}(.*?)\*{1,3}/g, '$1').replace(/\*/g, '')
+                  : msg.text}
               </div>
 
               {msg.apiWarning && (
