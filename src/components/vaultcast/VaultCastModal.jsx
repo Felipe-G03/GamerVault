@@ -69,10 +69,12 @@ export default function VaultCastModal({
   // Mecanismo ativo do VaultCast (LiveKit SFU via .env ou WebRTC P2P)
   const [activeEngine, setActiveEngine] = useState('p2p'); // 'livekit' | 'p2p'
 
-  // Configurações de stream
+  // Configurações de stream (padrão econômico: 720p a 30 FPS)
   const [streamTitle, setStreamTitle] = useState('');
-  const [resolution, setResolution] = useState('1080'); // '720' | '1080'
-  const [targetFps, setTargetFps] = useState('60'); // '30' | '60'
+  const [resolution, setResolution] = useState('720'); // '720' | '1080'
+  const [targetFps, setTargetFps] = useState('30'); // '30' | '60'
+  const [showPremiumPixModal, setShowPremiumPixModal] = useState(false);
+  const [copiedPix, setCopiedPix] = useState(false);
   const [audioMode, setAudioMode] = useState('window'); // 'window' | 'system' | 'none'
 
   // Estado da Transmissão Local
@@ -1371,11 +1373,18 @@ export default function VaultCastModal({
                         <div className="grid grid-cols-2 gap-2">
                           <select
                             value={resolution}
-                            onChange={(e) => setResolution(e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '1080') {
+                                setShowPremiumPixModal(true);
+                              } else {
+                                setResolution(val);
+                              }
+                            }}
                             className="px-3 py-2 bg-[#141824] border border-[#242b3d] rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
                           >
-                            <option value="1080">1080p (FHD)</option>
-                            <option value="720">720p (HD)</option>
+                            <option value="720">720p (HD - Padrão)</option>
+                            <option value="1080">1080p (FHD - Premium 🎩)</option>
                           </select>
 
                           <select
@@ -1383,8 +1392,8 @@ export default function VaultCastModal({
                             onChange={(e) => setTargetFps(e.target.value)}
                             className="px-3 py-2 bg-[#141824] border border-[#242b3d] rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
                           >
-                            <option value="60">60 FPS</option>
-                            <option value="30">30 FPS</option>
+                            <option value="30">30 FPS (Padrão)</option>
+                            <option value="60">60 FPS (Fluido)</option>
                           </select>
                         </div>
                       </div>
@@ -1670,6 +1679,77 @@ export default function VaultCastModal({
         </div>
 
       </div>
+
+      {/* MODAL CÔMICO: COBRANÇA IFOOD PIX DO DEV PARA 1080P */}
+      {showPremiumPixModal && (
+        <div className="fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#141824] border border-amber-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl relative overflow-hidden text-center space-y-4">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600" />
+            
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-3xl shadow-lg">
+              🍔
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-white flex items-center justify-center gap-2">
+                <span>Qualidade 1080p Full HD</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-semibold">Magnata</span>
+              </h3>
+              <p className="text-sm font-semibold text-amber-300 leading-snug">
+                coe chefe paga um ifood pro teu dev, 10 no pix
+              </p>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Transmitir em 1080p FHD puxa uma banda danada na nuvem! Apoie a pizza/lanche do desenvolvedor pra manter os servidores tinindo.
+              </p>
+            </div>
+
+            {/* Box Pix cômico */}
+            <div 
+              onClick={() => {
+                navigator.clipboard.writeText('12991369818');
+                setCopiedPix(true);
+                setTimeout(() => setCopiedPix(false), 2000);
+              }}
+              title="Clique para copiar a chave Pix"
+              className="p-3 bg-[#0d1017] hover:bg-[#111622] border border-[#242b3d] hover:border-emerald-500/40 rounded-xl text-left space-y-1 cursor-pointer transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Chave Pix (Telefone / Celular):</span>
+                <span className="text-[10px] text-emerald-400 font-medium">{copiedPix ? 'Copiado! ✓' : 'Clique para copiar'}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-emerald-400 font-mono bg-[#141824] px-2.5 py-1.5 rounded-lg border border-emerald-500/20 group-hover:border-emerald-500/50">
+                <span className="font-bold tracking-wider">12991369818</span>
+                <span className="text-xs">📋</span>
+              </div>
+            </div>
+
+            {/* Botões de Ação */}
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setResolution('1080');
+                  setShowPremiumPixModal(false);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs transition-all shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>É brincadeira, pode ir! 😂</span>
+                <span className="text-emerald-200 text-[10px] font-normal">(Liberar 1080p na faixa)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setResolution('720');
+                  setShowPremiumPixModal(false);
+                }}
+                className="w-full py-2 px-4 rounded-xl bg-[#1b2030] hover:bg-[#23293d] text-gray-400 hover:text-white font-medium text-xs transition-all border border-[#2d354d] cursor-pointer"
+              >
+                Ficar no 720p humilde e poupar o dev
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>,
     document.body
   );
