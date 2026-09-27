@@ -24,10 +24,16 @@ const ICE_SERVERS = {
  * Para cada espectador que solicita conexão no Firestore, cria um PeerConnection,
  * injeta as tracks de vídeo/áudio e estabelece a conexão direta.
  */
-export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange) {
+export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange, options = {}) {
   if (!db || !castId || !mediaStream) {
     return { stop: () => {}, updateStream: () => {} };
   }
+
+  const { resolution = '1080', targetFps = '60' } = options;
+  const is1080 = resolution === '1080' || resolution === '1080p';
+  const is60 = parseInt(targetFps, 10) >= 60;
+  const targetBitrate = is1080 ? (is60 ? 7500000 : 5000000) : (is60 ? 4500000 : 3000000);
+  const targetFramerate = parseInt(targetFps, 10) || 60;
 
   let currentStream = mediaStream;
   const viewersMap = new Map(); // key: viewerId -> { pc, unsubDoc, unsubCandidates }
@@ -67,6 +73,9 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
 
       // Adiciona as tracks atuais (vídeo e áudio) para este espectador
       currentStream.getTracks().forEach((track) => {
+        if (track.kind === 'video' && 'contentHint' in track) {
+          track.contentHint = 'motion';
+        }
         pc.addTrack(track, currentStream);
       });
 
@@ -91,10 +100,37 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
         offerToReceiveAudio: false,
         offerToReceiveVideo: false
       });
-      await pc.setLocalDescription(offer);
+
+      // Injeta taxas de bits dedicadas para jogos no SDP
+      let sdp = offer.sdp;
+      const bitrateKbps = Math.round(targetBitrate / 1000);
+      sdp = sdp.replace(/(m=video[^\r\n]*(\r\n|\n))((?:(?!m=)[^\r\n]*(\r\n|\n))*)/g, (match, mLine, nl1, rest) => {
+        const cleaned = rest.replace(/b=AS:[^\r\n]*(\r\n|\n)?/g, '').replace(/b=TIAS:[^\r\n]*(\r\n|\n)?/g, '');
+        return `${mLine}b=AS:${bitrateKbps}\r\nb=TIAS:${targetBitrate}\r\n${cleaned}`;
+      });
+
+      const modifiedOffer = { type: offer.type, sdp };
+      await pc.setLocalDescription(modifiedOffer);
+
+      // Ajusta parâmetros do RTCRtpSender para vídeo de gameplay
+      const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (videoSender) {
+        try {
+          const params = videoSender.getParameters();
+          if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+          }
+          params.encodings[0].maxBitrate = targetBitrate;
+          params.encodings[0].maxFramerate = targetFramerate;
+          params.degradationPreference = 'maintain-framerate';
+          await videoSender.setParameters(params);
+        } catch (pErr) {
+          console.warn('Erro ao configurar sender WebRTC:', pErr);
+        }
+      }
 
       await updateDoc(viewerDocRef, {
-        offer: { type: offer.type, sdp: offer.sdp },
+        offer: { type: modifiedOffer.type, sdp: modifiedOffer.sdp },
         status: 'offered'
       });
 
@@ -153,6 +189,10 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
     const newVideoTrack = newStream.getVideoTracks()?.[0];
     const newAudioTrack = newStream.getAudioTracks()?.[0];
 
+    if (newVideoTrack && 'contentHint' in newVideoTrack) {
+      newVideoTrack.contentHint = 'motion';
+    }
+
     viewersMap.forEach(({ pc }) => {
       try {
         const senders = pc.getSenders();
@@ -176,7 +216,7 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
 
   // Encerra todas as conexões
   function stop() {
-    unsetViewers?.();
+    unsubViewers?.();
     viewersMap.forEach((_, viewerId) => cleanupViewer(viewerId));
     viewersMap.clear();
     notifyCount();

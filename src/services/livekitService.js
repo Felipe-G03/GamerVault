@@ -71,14 +71,33 @@ export function clearLiveKitConfig() {
  * Envia APENAS 1 fluxo de vídeo/áudio para o servidor de mídia LiveKit na nuvem.
  * O LiveKit redistribui para 10, 50 ou 100+ espectadores sem sobrecarregar a internet do streamer.
  */
+/**
+ * Calcula a taxa de bits (bitrate) ideal em bits por segundo (bps)
+ * de acordo com a resolução e taxa de quadros selecionada.
+ */
+export function getBitrateForConfig(resolution = '1080', fps = '60') {
+  const is1080 = resolution === '1080' || resolution === '1080p';
+  const is60 = parseInt(fps, 10) >= 60;
+  if (is1080) {
+    return is60 ? 7500000 : 5000000; // 7.5 Mbps para 1080p60, 5.0 Mbps para 1080p30
+  } else {
+    return is60 ? 4500000 : 3000000; // 4.5 Mbps para 720p60, 3.0 Mbps para 720p30
+  }
+}
+
 export async function startLiveKitBroadcast({
   roomName,
   identity,
   stream,
+  resolution = '1080',
+  targetFps = '60',
   onViewerCountChange
 }) {
   const config = getLiveKitConfig();
   if (!config) throw new Error('LiveKit não configurado.');
+
+  const bitrateBps = getBitrateForConfig(resolution, targetFps);
+  const targetFramerate = parseInt(targetFps, 10) || 60;
 
   // Gera o token de acesso assinado via Electron IPC
   const tokenRes = await window.electronAPI.generateLiveKitToken({
@@ -94,8 +113,8 @@ export async function startLiveKitBroadcast({
   }
 
   const room = new Room({
-    adaptiveStream: true,
-    dynacast: true
+    adaptiveStream: false,
+    dynacast: false
   });
 
   await room.connect(config.url, tokenRes.token);
@@ -105,10 +124,22 @@ export async function startLiveKitBroadcast({
   let videoPub = null;
   let audioPub = null;
 
+  const encodingConfig = {
+    maxBitrate: bitrateBps,
+    maxFramerate: targetFramerate
+  };
+
   if (currentVideoTrack) {
+    if ('contentHint' in currentVideoTrack) {
+      currentVideoTrack.contentHint = 'motion';
+    }
     videoPub = await room.localParticipant.publishTrack(currentVideoTrack, {
       name: 'vaultcast-video',
-      source: Track.Source.ScreenShare
+      source: Track.Source.ScreenShare,
+      simulcast: false,
+      videoEncoding: encodingConfig,
+      screenShareEncoding: encodingConfig,
+      degradationPreference: 'maintain-framerate'
     });
   }
 
@@ -174,9 +205,16 @@ export async function startLiveKitBroadcast({
           await room.localParticipant.unpublishTrack(currentVideoTrack);
         }
         currentVideoTrack = newVideo;
+        if ('contentHint' in currentVideoTrack) {
+          currentVideoTrack.contentHint = 'motion';
+        }
         videoPub = await room.localParticipant.publishTrack(newVideo, {
           name: 'vaultcast-video',
-          source: Track.Source.ScreenShare
+          source: Track.Source.ScreenShare,
+          simulcast: false,
+          videoEncoding: encodingConfig,
+          screenShareEncoding: encodingConfig,
+          degradationPreference: 'maintain-framerate'
         });
       } catch (err) {
         console.warn('Erro ao atualizar track de vídeo no LiveKit:', err);
@@ -232,8 +270,8 @@ export function connectLiveKitViewer({
     if (isCleanedUp) return;
     try {
       room = new Room({
-        adaptiveStream: true,
-        dynacast: true
+        adaptiveStream: false,
+        dynacast: false
       });
 
       room.on(RoomEvent.ConnectionStateChanged, (state) => {

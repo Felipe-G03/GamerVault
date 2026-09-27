@@ -17,6 +17,12 @@ except Exception as e:
     print(f"Erro ao conectar ao Firebase: {e}")
     sys.exit(1)
 
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 casts = list(db.collection('vaultcasts').stream())
 print(f"\nEncontradas {len(casts)} sessões no Firestore.")
 
@@ -28,4 +34,4 @@ for c in casts:
     print(f"- Encerrando sessão: {c.id} (Piloto: {pilot} | Jogo: {game} | Status: {status})")
     c.reference.delete()
 
-print("\n✅ Todas as sessões fantasmas foram limpas do Firestore!")
+print("\n[OK] Todas as sessões fantasmas foram limpas do Firestore!")

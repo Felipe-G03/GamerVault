@@ -321,6 +321,9 @@ export default function VaultCastModal({
 
       const videoTrack = stream.getVideoTracks()?.[0];
       if (videoTrack) {
+        if ('contentHint' in videoTrack) {
+          videoTrack.contentHint = 'motion';
+        }
         videoTrack.onended = () => {
           handleStopBroadcast();
         };
@@ -348,6 +351,8 @@ export default function VaultCastModal({
             roomName: newCastId,
             identity: user?.uid || 'streamer',
             stream,
+            resolution,
+            targetFps,
             onViewerCountChange: (count) => setViewerCount(count)
           });
           engine = 'livekit';
@@ -355,13 +360,13 @@ export default function VaultCastModal({
           console.warn('Falha no LiveKit SFU, alternando para WebRTC P2P:', lkErr);
           broadcasterControllerRef.current = startBroadcastingWebRTC(newCastId, stream, (count) => {
             setViewerCount(count);
-          });
+          }, { resolution, targetFps });
           engine = 'p2p';
         }
       } else {
         broadcasterControllerRef.current = startBroadcastingWebRTC(newCastId, stream, (count) => {
           setViewerCount(count);
-        });
+        }, { resolution, targetFps });
         engine = 'p2p';
       }
 
@@ -417,6 +422,10 @@ export default function VaultCastModal({
       };
 
       const newStream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+      const newVideoTrack = newStream.getVideoTracks()?.[0];
+      if (newVideoTrack && 'contentHint' in newVideoTrack) {
+        newVideoTrack.contentHint = 'motion';
+      }
 
       // 2. Se a nova janela for transmitida com isolamento de áudio, troca para o áudio exclusivo do novo processo
       let newProcessAudio = null;
