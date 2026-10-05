@@ -58,6 +58,7 @@ export default function VaultCastModal({
   user,
   profile,
   initialRoomId = null,
+  autoStartGame = null,
   onClose
 }) {
   const [activeTab, setActiveTab] = useState(initialRoomId ? 'guild' : 'broadcast'); // 'broadcast' | 'guild'
@@ -393,6 +394,23 @@ export default function VaultCastModal({
         resolution: `${resolution}p`,
         fps: targetFps
       }).catch(console.warn);
+
+      // Sincroniza estado da live com Electron Tray e In-Game Overlay
+      window.electronAPI?.sendBroadcastState?.({
+        isBroadcasting: true,
+        gameTitle: streamTitle || selectedSource.name,
+        viewerCount: 0
+      });
+      try {
+        const bc = new BroadcastChannel('vaultcast_sync');
+        bc.postMessage({
+          type: 'VAULTCAST_STATE_CHANGE',
+          isBroadcasting: true,
+          gameTitle: streamTitle || selectedSource.name,
+          viewerCount: 0
+        });
+        bc.close();
+      } catch (_) {}
     } catch (err) {
       console.error('Falha ao iniciar transmissão:', err);
       alert('Não foi possível capturar esta janela. Verifique se o jogo/janela não está minimizado.');
@@ -548,7 +566,90 @@ export default function VaultCastModal({
     setCastId(null);
     setBroadcastStartTime(null);
     setElapsedTime('00:00:00');
+
+    // Sincroniza encerramento com Electron Tray e In-Game Overlay
+    window.electronAPI?.sendBroadcastState?.({
+      isBroadcasting: false,
+      gameTitle: null,
+      viewerCount: 0
+    });
+    try {
+      const bc = new BroadcastChannel('vaultcast_sync');
+      bc.postMessage({
+        type: 'VAULTCAST_STATE_CHANGE',
+        isBroadcasting: false,
+        gameTitle: null,
+        viewerCount: 0
+      });
+      bc.close();
+    } catch (_) {}
   };
+
+  // Escuta comandos de encerramento remoto (Tray, Overlay ou Fechamento do Jogo)
+  useEffect(() => {
+    const unsubForce = window.electronAPI?.onForceStopBroadcast?.(() => {
+      handleStopBroadcast();
+    });
+
+    let bc = null;
+    try {
+      bc = new BroadcastChannel('vaultcast_sync');
+      bc.onmessage = (e) => {
+        if (e.data?.type === 'TRIGGER_STOP_LIVE') {
+          handleStopBroadcast();
+        }
+      };
+    } catch (_) {}
+
+    return () => {
+      unsubForce?.();
+      bc?.close();
+    };
+  }, [castId]);
+
+  // Disparo automático quando requisitado via In-Game Overlay
+  useEffect(() => {
+    if (!autoStartGame || isBroadcasting) return;
+
+    const startForGame = async () => {
+      try {
+        let sourcesList = sources;
+        if (!sourcesList || sourcesList.length === 0) {
+          if (window.electronAPI?.getVaultCastSources) {
+            sourcesList = await window.electronAPI.getVaultCastSources();
+            setSources(sourcesList);
+          }
+        }
+
+        const targetTitle = typeof autoStartGame === 'object' ? autoStartGame.title : null;
+        let chosen = null;
+        if (targetTitle && sourcesList?.length > 0) {
+          const tLower = targetTitle.toLowerCase();
+          chosen = sourcesList.find(s => !s.isScreen && s.name && s.name.toLowerCase().includes(tLower));
+        }
+        if (!chosen && sourcesList?.length > 0) {
+          chosen = sourcesList.find(s => !s.isScreen) || sourcesList[0];
+        }
+
+        if (chosen) {
+          setSelectedSource(chosen);
+          setStreamTitle(targetTitle || chosen.name);
+          setIsMinimized(true);
+        }
+      } catch (err) {
+        console.warn('Erro ao configurar live automática:', err);
+      }
+    };
+
+    startForGame();
+  }, [autoStartGame]);
+
+  // Se autoStartGame foi definido e uma fonte foi selecionada, dispara o stream automaticamente
+  useEffect(() => {
+    if (autoStartGame && selectedSource && !isBroadcasting && !isStartingBroadcast) {
+      handleStartBroadcast();
+    }
+  }, [selectedSource, autoStartGame]);
 
   // Destaca a live para uma janela própria nativa do Windows (Always-on-Top estilo princípio-e-fim-dnd)
   const handleDetachWindow = () => {
@@ -676,6 +777,39 @@ export default function VaultCastModal({
       } catch (_) {}
     };
   }, [elapsedTime, viewerCount, streamTitle, selectedSource]);
+
+  // Watchdog de janela: verifica se a janela capturada ainda existe no Windows
+  useEffect(() => {
+    if (!isBroadcasting || selectedSource?.isScreen || !selectedSource?.id) return;
+    const targetSourceId = selectedSource.id;
+
+    const interval = setInterval(async () => {
+      try {
+        if (window.electronAPI?.getVaultCastSources) {
+          const sources = await window.electronAPI.getVaultCastSources();
+          const exists = sources.some(s => s.id === targetSourceId);
+          if (!exists) {
+            console.warn('[VaultCast Watchdog] Janela do jogo fechada. Encerrando transmissão...');
+            handleStopBroadcast();
+          }
+        }
+      } catch (err) {
+        console.warn('[VaultCast Watchdog] Erro ao verificar fontes:', err);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isBroadcasting, selectedSource]);
+
+  // Listener para encerramento forçado vindo da bandeja (Tray) ou atalho global
+  useEffect(() => {
+    if (!window.electronAPI?.onForceStopBroadcast) return;
+    const cleanup = window.electronAPI.onForceStopBroadcast(() => {
+      console.log('[VaultCast] Encerramento forçado solicitado via Electron.');
+      handleStopBroadcast();
+    });
+    return cleanup;
+  }, [isBroadcasting, castId]);
 
   // Sincroniza periodicamente tempo e contagem de espectadores com a janela destacada
   useEffect(() => {

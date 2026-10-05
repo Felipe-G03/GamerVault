@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Minus, Square, X, Gamepad2, Rocket, Settings, RotateCw } from 'lucide-react';
+import { Minus, Square, X, Gamepad2, Rocket, Settings, RotateCw, Radio } from 'lucide-react';
 import ThemeSelector from './ThemeSelector';
 
-export default function TitleBar({ updateInfo, onOpenUpdateModal, onOpenSettings, onCheckUpdate }) {
+export default function TitleBar({ updateInfo, activeCast, onStopActiveCast, onOpenUpdateModal, onOpenSettings, onCheckUpdate }) {
   const isElectron = typeof window !== 'undefined' && window.electronAPI?.isElectron;
   const [isChecking, setIsChecking] = useState(false);
 
@@ -42,7 +42,7 @@ export default function TitleBar({ updateInfo, onOpenUpdateModal, onOpenSettings
         </div>
         <div className="hidden sm:flex items-center gap-1.5 border-l border-border/80 pl-2.5">
           <span className="text-[10px] text-gray-500">
-            v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0'} DESKTOP
+            v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.4.0'} DESKTOP
           </span>
           <button
             onClick={handleManualCheck}
@@ -63,9 +63,21 @@ export default function TitleBar({ updateInfo, onOpenUpdateModal, onOpenSettings
         </div>
       </div>
 
-      {/* Botão Central de Atualização Disponível */}
-      {updateInfo?.hasUpdate && (
-        <div className="flex items-center" style={{ WebkitAppRegion: 'no-drag' }}>
+      {/* Centro: Indicador de Live Ativa com Botão de Encerrar OU Botão de Atualização */}
+      <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' }}>
+        {activeCast && (
+          <button
+            onClick={onStopActiveCast}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/20 hover:bg-red-600/35 border border-red-500/50 text-red-300 hover:text-white font-mono text-[10px] font-bold tracking-wider transition-all animate-pulse cursor-pointer shadow-[0_0_12px_rgba(239,68,68,0.3)]"
+            title="Sua transmissão está ativa. Clique para forçar o encerramento imediato no LiveKit Cloud e Firestore."
+          >
+            <Radio className="w-3 h-3 text-red-400" />
+            <span>AO VIVO: {activeCast.gameTitle || 'Gameplay'}</span>
+            <span className="underline ml-1 text-red-100">ENCERRAR LIVE</span>
+          </button>
+        )}
+
+        {updateInfo?.hasUpdate && !activeCast && (
           <button
             onClick={onOpenUpdateModal}
             className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 hover:text-cyan-300 font-mono text-[10px] font-bold tracking-wider transition-all shadow-[0_0_12px_rgba(6,182,212,0.25)] hover:shadow-[0_0_18px_rgba(6,182,212,0.45)] active:scale-95 group cursor-pointer"
@@ -74,8 +86,8 @@ export default function TitleBar({ updateInfo, onOpenUpdateModal, onOpenSettings
             <Rocket className="w-3 h-3 text-cyan-400 group-hover:animate-bounce" />
             <span className="tracking-wide">ATUALIZAÇÃO v{updateInfo.latestVersion} DISPONÍVEL</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Lado Direito: Seletor de Tema & Configurações & Controles da Janela */}
       <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' }}>

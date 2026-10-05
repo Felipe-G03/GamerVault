@@ -238,12 +238,25 @@ export async function startLiveKitBroadcast({
     }
   }
 
-  // Encerra a transmissão no LiveKit
+  // Encerra a transmissão no LiveKit e deleta a sala na nuvem
   async function stop() {
     unsubFirestoreViewers?.();
     try {
       await room.disconnect();
     } catch (_) {}
+
+    try {
+      if (window.electronAPI?.deleteLiveKitRoom && roomName) {
+        await window.electronAPI.deleteLiveKitRoom({
+          url: config.url,
+          apiKey: config.apiKey,
+          apiSecret: config.apiSecret,
+          roomName
+        });
+      }
+    } catch (e) {
+      console.warn('Erro ao deletar sala LiveKit via IPC:', e);
+    }
   }
 
   return { stop, updateStream };

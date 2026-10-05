@@ -18,11 +18,11 @@ import AuthModal from './components/auth/AuthModal';
 import UpdateModal from './components/common/UpdateModal';
 import SettingsModal from './components/layout/SettingsModal';
 import VaultCastModal from './components/vaultcast/VaultCastModal';
+import PatchNotesModal from './components/common/PatchNotesModal';
 import StartupSplash from './components/common/StartupSplash';
 import LargaDeFrescuraView from './components/roulette/LargaDeFrescuraView';
-import LWorderFloatingWidget from './components/lworder/LWorderFloatingWidget';
-import { getAllHubGames } from './services/hubService';
-import { Loader2 } from 'lucide-react';
+import { listenToActiveCasts, endCastSession } from './services/vaultCastService';
+import { Loader2, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [splashFinished, setSplashFinished] = useState(false);
@@ -39,10 +39,55 @@ export default function App() {
   const [updateInfo, setUpdateInfo] = useState(null);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isPatchNotesOpen, setIsPatchNotesOpen] = useState(false);
 
   // VaultCast: Transmissão ao vivo na Guilda e Deep Linking
   const [isVaultCastModalOpen, setIsVaultCastModalOpen] = useState(false);
   const [vaultCastRoomId, setVaultCastRoomId] = useState(null);
+  const [vaultCastAutoStart, setVaultCastAutoStart] = useState(null);
+  const [activeUserCast, setActiveUserCast] = useState(null);
+
+  // Escuta gatilhos do In-Game Overlay para iniciar live diretamente
+  useEffect(() => {
+    const handleTriggerLive = (game) => {
+      setVaultCastAutoStart(game || true);
+      setIsVaultCastModalOpen(true);
+    };
+
+    const unsubIpc = window.electronAPI?.onTriggerStartLive?.(handleTriggerLive);
+
+    let bc = null;
+    try {
+      bc = new BroadcastChannel('vaultcast_sync');
+      bc.onmessage = (e) => {
+        if (e.data?.type === 'TRIGGER_START_LIVE') {
+          handleTriggerLive(e.data.game);
+        }
+      };
+    } catch (_) {}
+
+    return () => {
+      unsubIpc?.();
+      bc?.close();
+    };
+  }, []);
+
+  // Escuta se o próprio usuário tem uma live ativa para exibir indicador global e botão de encerramento
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = listenToActiveCasts((casts) => {
+      const myLive = casts.find(c => c.pilotId === user.uid || c.id?.includes(user.uid));
+      setActiveUserCast(myLive || null);
+    });
+    return unsub;
+  }, [user]);
+
+  const handleStopActiveCast = async () => {
+    if (activeUserCast?.id) {
+      await endCastSession(activeUserCast.id);
+      setActiveUserCast(null);
+    }
+  };
 
   // Ouvintes de Ciclo de Vida do Electron (Bandeja / Standby / Configurações / Deep Links)
   useEffect(() => {
@@ -299,6 +344,8 @@ export default function App() {
       {/* Barra de Título Superior Nativa/Electron */}
       <TitleBar 
         updateInfo={updateInfo}
+        activeCast={activeUserCast}
+        onStopActiveCast={handleStopActiveCast}
         onOpenUpdateModal={() => setIsUpdateModalOpen(true)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onCheckUpdate={handleCheckUpdate}
@@ -319,9 +366,11 @@ export default function App() {
           user={user}
           profile={profile}
           initialRoomId={vaultCastRoomId}
+          autoStartGame={vaultCastAutoStart}
           onClose={() => {
             setIsVaultCastModalOpen(false);
             setVaultCastRoomId(null);
+            setVaultCastAutoStart(null);
           }}
         />
       )}
@@ -331,6 +380,13 @@ export default function App() {
         <UpdateModal
           updateInfo={updateInfo}
           onClose={() => setIsUpdateModalOpen(false)}
+        />
+      )}
+
+      {/* Modal do Patch Notes / O que há de novo */}
+      {isPatchNotesOpen && (
+        <PatchNotesModal
+          onClose={() => setIsPatchNotesOpen(false)}
         />
       )}
 
@@ -437,6 +493,7 @@ export default function App() {
                   <ProfileView
                     user={user}
                     profile={profile}
+                    games={games}
                     onProfileUpdated={() => loadUserProfile(user.uid, user.email)}
                   />
                 )}
@@ -444,13 +501,25 @@ export default function App() {
             )}
           </main>
 
-          {/* Widget da IA Gamer L.Worder (Canto Inferior Esquerdo) */}
-          <LWorderFloatingWidget
-            profile={profile}
-            games={games}
-            hubGames={getAllHubGames()}
-            onAddToWishlist={handleDirectAddWishlist}
-          />
+          {/* Botão Flutuante: O que há de novo? (Patch Notes) */}
+          <button
+            type="button"
+            onClick={() => setIsPatchNotesOpen(true)}
+            className="fixed bottom-5 right-5 z-40 flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-[#0c101a]/90 hover:bg-[#141a2a] border border-cyan-500/40 hover:border-cyan-400 text-cyan-400 hover:text-cyan-300 shadow-[0_4px_24px_rgba(6,182,212,0.25)] backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 group cursor-pointer"
+            title="Ver novidades e o que há de novo no GamerVault"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+            </span>
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
+            <span className="text-xs font-gamer font-bold tracking-wide">
+              O que há de novo?
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+              v2.4.0
+            </span>
+          </button>
         </>
       )}
     </div>

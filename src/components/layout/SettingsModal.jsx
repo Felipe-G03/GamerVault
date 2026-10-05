@@ -12,14 +12,23 @@ import {
   Info,
   Keyboard,
   RotateCw,
-  Rocket
+  Rocket,
+  Gamepad2
 } from 'lucide-react';
 
-const PRESET_SHORTCUTS = [
+const PRESET_GLOBAL_SHORTCUTS = [
   { label: 'Alt + Espaço (Padrão)', value: 'Alt+Space' },
   { label: 'Ctrl + Shift + G', value: 'CommandOrControl+Shift+G' },
   { label: 'Ctrl + Alt + V', value: 'CommandOrControl+Alt+V' },
   { label: 'F10', value: 'F10' }
+];
+
+const PRESET_OVERLAY_SHORTCUTS = [
+  { label: 'Alt + O (Padrão)', value: 'Alt+O' },
+  { label: 'Ctrl + Shift + O', value: 'CommandOrControl+Shift+O' },
+  { label: 'Alt + H', value: 'Alt+H' },
+  { label: 'F11', value: 'F11' },
+  { label: 'F12', value: 'F12' }
 ];
 
 export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
@@ -27,13 +36,14 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
     openAtLogin: false,
     startMinimized: false,
     minimizeToTray: true,
-    globalShortcut: 'Alt+Space'
+    globalShortcut: 'Alt+Space',
+    overlayShortcut: 'Alt+O'
   });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
+  const [recordingTarget, setRecordingTarget] = useState(null); // 'global' | 'overlay' | null
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateFeedback, setUpdateFeedback] = useState(null);
 
@@ -63,13 +73,27 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
         if (window.electronAPI?.getSettings) {
           const res = await window.electronAPI.getSettings();
           if (res) {
-            setSettings(res);
+            setSettings({
+              openAtLogin: false,
+              startMinimized: false,
+              minimizeToTray: true,
+              globalShortcut: 'Alt+Space',
+              overlayShortcut: 'Alt+O',
+              ...res
+            });
           }
         } else {
           // Fallback para ambiente web
           const saved = localStorage.getItem('gamervault_settings');
           if (saved) {
-            setSettings(JSON.parse(saved));
+            setSettings({
+              openAtLogin: false,
+              startMinimized: false,
+              minimizeToTray: true,
+              globalShortcut: 'Alt+Space',
+              overlayShortcut: 'Alt+O',
+              ...JSON.parse(saved)
+            });
           }
         }
       } catch (err) {
@@ -83,7 +107,7 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
 
   // Gravação de atalho de teclado interativa
   useEffect(() => {
-    if (!isRecordingShortcut) return;
+    if (!recordingTarget) return;
 
     const handleKeyDown = (e) => {
       e.preventDefault();
@@ -106,13 +130,17 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
       keys.push(mainKey);
       const shortcutStr = keys.join('+');
 
-      setSettings((prev) => ({ ...prev, globalShortcut: shortcutStr }));
-      setIsRecordingShortcut(false);
+      if (recordingTarget === 'overlay') {
+        setSettings((prev) => ({ ...prev, overlayShortcut: shortcutStr }));
+      } else {
+        setSettings((prev) => ({ ...prev, globalShortcut: shortcutStr }));
+      }
+      setRecordingTarget(null);
     };
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isRecordingShortcut]);
+  }, [recordingTarget]);
 
   const handleToggle = (key) => {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -299,21 +327,21 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
                   {/* Botão de Gravação / Indicador Atual */}
                   <button
                     type="button"
-                    onClick={() => setIsRecordingShortcut(!isRecordingShortcut)}
+                    onClick={() => setRecordingTarget(recordingTarget === 'global' ? null : 'global')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all active:scale-95 ${
-                      isRecordingShortcut
+                      recordingTarget === 'global'
                         ? 'bg-rose-500/20 border-rose-500 text-rose-300 animate-pulse'
                         : 'bg-surface border-border hover:border-cyan-400 text-cyan-400'
                     }`}
                   >
-                    <span>{isRecordingShortcut ? 'Pressione teclas...' : formatShortcutDisplay(settings.globalShortcut)}</span>
+                    <span>{recordingTarget === 'global' ? 'Pressione teclas...' : formatShortcutDisplay(settings.globalShortcut)}</span>
                   </button>
                 </div>
 
                 {/* Presets Rápidos */}
                 <div className="flex items-center gap-1.5 flex-wrap pt-1">
                   <span className="text-[10px] font-mono text-gray-400 mr-1">Sugestões:</span>
-                  {PRESET_SHORTCUTS.map((preset) => {
+                  {PRESET_GLOBAL_SHORTCUTS.map((preset) => {
                     const isSelected = settings.globalShortcut === preset.value;
                     return (
                       <button
@@ -321,11 +349,64 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
                         type="button"
                         onClick={() => {
                           setSettings((prev) => ({ ...prev, globalShortcut: preset.value }));
-                          setIsRecordingShortcut(false);
+                          setRecordingTarget(null);
                         }}
                         className={`text-[10px] font-mono px-2 py-0.5 rounded-md border transition-all ${
                           isSelected
                             ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                            : 'bg-surface hover:bg-surface-high border-border text-gray-300'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Configuração de Atalho do Overlay In-Game */}
+              <div className="p-3.5 rounded-xl bg-surface/60 border border-purple-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className="text-xs sm:text-sm font-gamer font-semibold text-white flex items-center gap-1.5">
+                      <Gamepad2 className="w-4 h-4 text-purple-400" />
+                      <span>Atalho do HUD In-Game (Overlay)</span>
+                    </div>
+                    <div className="text-[11px] text-gray-400 font-sans">
+                      Aperte durante uma partida iniciada pelo GamerVault para abrir notas, live e guias.
+                    </div>
+                  </div>
+
+                  {/* Botão de Gravação / Indicador Atual */}
+                  <button
+                    type="button"
+                    onClick={() => setRecordingTarget(recordingTarget === 'overlay' ? null : 'overlay')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all active:scale-95 ${
+                      recordingTarget === 'overlay'
+                        ? 'bg-rose-500/20 border-rose-500 text-rose-300 animate-pulse'
+                        : 'bg-surface border-purple-500/40 hover:border-purple-400 text-purple-300'
+                    }`}
+                  >
+                    <span>{recordingTarget === 'overlay' ? 'Pressione teclas...' : formatShortcutDisplay(settings.overlayShortcut || 'Alt+O')}</span>
+                  </button>
+                </div>
+
+                {/* Presets Rápidos */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[10px] font-mono text-gray-400 mr-1">Sugestões:</span>
+                  {PRESET_OVERLAY_SHORTCUTS.map((preset) => {
+                    const isSelected = settings.overlayShortcut === preset.value;
+                    return (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        onClick={() => {
+                          setSettings((prev) => ({ ...prev, overlayShortcut: preset.value }));
+                          setRecordingTarget(null);
+                        }}
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded-md border transition-all ${
+                          isSelected
+                            ? 'bg-purple-500/20 border-purple-400 text-purple-300 font-bold'
                             : 'bg-surface hover:bg-surface-high border-border text-gray-300'
                         }`}
                       >

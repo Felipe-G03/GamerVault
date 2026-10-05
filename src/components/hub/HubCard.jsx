@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Loader2, Palette } from 'lucide-react';
+import { Play, Loader2, Palette, EyeOff } from 'lucide-react';
 import PlatformIcon from '../common/PlatformIcon';
 
 export default function HubCard({
@@ -7,7 +7,8 @@ export default function HubCard({
   vaultGame,
   onLaunch,
   onCardClick,
-  onCustomizeMedia
+  onCustomizeMedia,
+  onHideGame
 }) {
   const [launching, setLaunching] = useState(false);
 
@@ -132,15 +133,32 @@ export default function HubCard({
           )}
         </button>
 
-        {/* Atalho Secundário: Trocar Capa / Mídia */}
-        <button
-          onClick={handleCustomizeClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-white text-[11px] font-mono backdrop-blur-md transition-all hover:scale-105 active:scale-95"
-          title="Trocar Capa e Trilha Sonora"
-        >
-          <Palette className="w-3.5 h-3.5 text-accent-bright" />
-          <span>Capa & Trilha</span>
-        </button>
+        <div className="flex items-center gap-1.5 w-full justify-center">
+          {/* Atalho Secundário: Trocar Capa / Mídia */}
+          <button
+            onClick={handleCustomizeClick}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 border border-white/15 text-white text-[10px] font-mono backdrop-blur-md transition-all hover:scale-105 active:scale-95"
+            title="Trocar Capa e Trilha Sonora"
+          >
+            <Palette className="w-3 h-3 text-accent-bright" />
+            <span>Mídia</span>
+          </button>
+
+          {/* Ocultar do Hub */}
+          {onHideGame && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onHideGame(game);
+              }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-[10px] font-mono backdrop-blur-md transition-all hover:scale-105 active:scale-95"
+              title="Ocultar este jogo do Hub"
+            >
+              <EyeOff className="w-3 h-3 text-rose-400" />
+              <span>Ocultar</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* BASE DO PÔSTER: TÍTULO, DETALHES E BADGE CIRCULAR (Estilo Big Picture) */}

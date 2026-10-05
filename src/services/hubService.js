@@ -136,13 +136,91 @@ export function saveHubCollapsedState(platformId, isCollapsed) {
   }
 }
 
+const HIDDEN_GAMES_STORAGE_KEY = 'gamervault_hub_hidden_games';
+
 /**
- * Carrega os jogos cacheados localmente para uma plataforma
+ * Retorna a lista de jogos ocultados pelo usuário no Hub
+ */
+export function getHiddenHubGames() {
+  try {
+    const raw = localStorage.getItem(HIDDEN_GAMES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+/**
+ * Verifica se um jogo está na lista de ocultados
+ */
+export function isGameHidden(game, hiddenList = null) {
+  if (!game) return false;
+  const hidden = hiddenList || getHiddenHubGames();
+  const gameId = String(game.id || game.hubId || '');
+  const gameTitle = String(game.title || '').trim().toLowerCase();
+
+  return hidden.some(h => {
+    if (h.id && String(h.id) === gameId) return true;
+    if (h.title && String(h.title).trim().toLowerCase() === gameTitle) return true;
+    return false;
+  });
+}
+
+/**
+ * Oculta um jogo do Hub e o remove do cache
+ */
+export function hideHubGame(platformId, game) {
+  try {
+    const hidden = getHiddenHubGames();
+    const gameId = game.id || game.hubId || `hub_${Date.now()}`;
+    const gameTitle = (game.title || '').trim();
+
+    if (!isGameHidden(game, hidden)) {
+      hidden.push({
+        id: gameId,
+        title: gameTitle,
+        platformId: platformId || game.platform || 'custom',
+        imageUrl: game.imageUrl || '',
+        hiddenAt: Date.now()
+      });
+      localStorage.setItem(HIDDEN_GAMES_STORAGE_KEY, JSON.stringify(hidden));
+    }
+
+    // Remove do cache da plataforma
+    const current = getCachedPlatformGames(platformId);
+    const updated = current.filter(g => !isGameHidden(g, hidden));
+    localStorage.setItem(GAMES_STORAGE_PREFIX + platformId, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.error('Erro ao ocultar jogo do Hub:', e);
+    return [];
+  }
+}
+
+/**
+ * Restaura um jogo previamente ocultado
+ */
+export function unhideHubGame(gameKey) {
+  try {
+    const hidden = getHiddenHubGames();
+    const updated = hidden.filter(h => h.id !== gameKey && h.title !== gameKey);
+    localStorage.setItem(HIDDEN_GAMES_STORAGE_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.error('Erro ao restaurar jogo ocultado:', e);
+    return [];
+  }
+}
+
+/**
+ * Carrega os jogos cacheados localmente para uma plataforma (filtrando ocultados)
  */
 export function getCachedPlatformGames(platformId) {
   try {
     const raw = localStorage.getItem(GAMES_STORAGE_PREFIX + platformId);
-    return raw ? JSON.parse(raw) : [];
+    const list = raw ? JSON.parse(raw) : [];
+    const hidden = getHiddenHubGames();
+    return list.filter(g => !isGameHidden(g, hidden));
   } catch (_) {
     return [];
   }
@@ -253,12 +331,15 @@ export async function scanAndEnrichPlatform(platformId, folderPath, onProgress) 
     return [];
   }
 
-  // 2. Enriquecimento progressivo com RAWG
+  // 2. Enriquecimento progressivo com RAWG (ignorando jogos ocultados)
+  const hidden = getHiddenHubGames();
+  const filteredRaw = rawGames.filter(g => !isGameHidden(g, hidden));
+
   const enrichedGames = [];
-  for (let i = 0; i < rawGames.length; i++) {
-    const raw = rawGames[i];
+  for (let i = 0; i < filteredRaw.length; i++) {
+    const raw = filteredRaw[i];
     if (onProgress) {
-      onProgress(i + 1, rawGames.length, raw.title);
+      onProgress(i + 1, filteredRaw.length, raw.title);
     }
     const full = await enrichGameWithRawg(raw);
     enrichedGames.push(full);
@@ -280,7 +361,10 @@ export async function launchGame(game) {
 
   return await window.electronAPI.launchGame({
     launchType: game.launchType,
-    launchTarget: game.launchTarget
+    launchTarget: game.launchTarget,
+    title: game.title,
+    platform: game.platform,
+    imageUrl: game.imageUrl
   });
 }
 

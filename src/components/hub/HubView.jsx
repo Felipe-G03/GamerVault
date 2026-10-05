@@ -14,7 +14,8 @@ import {
   Compass,
   LayoutGrid,
   Layers,
-  Globe
+  Globe,
+  EyeOff
 } from 'lucide-react';
 import {
   HUB_PLATFORMS,
@@ -26,11 +27,15 @@ import {
   launchGame,
   enrichGameWithRawg,
   setCachedPlatformGames,
-  updatePlatformGameMedia
+  updatePlatformGameMedia,
+  getHiddenHubGames,
+  hideHubGame,
+  unhideHubGame
 } from '../../services/hubService';
 import HubCard from './HubCard';
 import HubFolderModal from './HubFolderModal';
 import HubFinishModal from './HubFinishModal';
+import HubHiddenModal from './HubHiddenModal';
 import GameExpandedModal from '../vault/GameExpandedModal';
 import GameMediaModal from '../common/GameMediaModal';
 import PlatformIcon from '../common/PlatformIcon';
@@ -54,6 +59,10 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlatformFilter, setSelectedPlatformFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' (padrão inicial) | 'accordions'
+
+  // Jogos ocultados do Hub
+  const [hiddenGames, setHiddenGames] = useState(getHiddenHubGames());
+  const [isViewingHiddenModal, setIsViewingHiddenModal] = useState(false);
 
   // Modais
   const [folderModalPlatform, setFolderModalPlatform] = useState(null);
@@ -181,18 +190,21 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
     }
   };
 
-  // Adicionar um jogo individual manualmente ("Suspeitos" / .exe)
+  // Adicionar um jogo individual manualmente ("Suspeitos" / .exe / .lnk / .bat / .cmd / .url)
   const handleAddManualGame = async () => {
     try {
       if (window.electronAPI?.selectFile) {
         const filePath = await window.electronAPI.selectFile();
         if (filePath) {
-          const fileName = filePath.split(/[\\/]/).pop().replace(/\.exe$/i, '');
+          const fileName = filePath.split(/[\\/]/).pop().replace(/\.(exe|lnk|bat|cmd|url)$/i, '');
+          const ext = filePath.split('.').pop().toLowerCase();
+          const launchType = (ext === 'lnk' || ext === 'url') ? 'lnk' : (ext === 'bat' || ext === 'cmd') ? 'bat' : 'exe';
+
           const rawGame = {
             id: `suspeitos_manual_${Date.now()}`,
             title: fileName,
             platform: 'suspeitos',
-            launchType: 'exe',
+            launchType,
             launchTarget: filePath
           };
 
@@ -203,10 +215,40 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
           setCachedPlatformGames('suspeitos', updated);
         }
       } else {
-        alert('Disponível no app Desktop para selecionar executáveis (.exe).');
+        alert('Disponível no app Desktop para selecionar executáveis (.exe) e atalhos (.lnk).');
       }
     } catch (e) {
-      console.error('Erro ao adicionar executável manual:', e);
+      console.error('Erro ao adicionar executável/atalho manual:', e);
+    }
+  };
+
+  // Ocultar um jogo do Hub (para tirar itens indesejados da biblioteca)
+  const handleHideGame = (game) => {
+    if (!game) return;
+    const confirmHide = window.confirm(`Deseja ocultar "${game.title}" do Gamer's Vault Hub?\n\nEle não aparecerá mais nesta lista (você poderá restaurá-lo a qualquer momento pelo botão de Ocultados).`);
+    if (!confirmHide) return;
+
+    const platformId = game.platform || 'suspeitos';
+    const updated = hideHubGame(platformId, game);
+
+    setPlatformGames(prev => ({
+      ...prev,
+      [platformId]: updated
+    }));
+
+    setHiddenGames(getHiddenHubGames());
+  };
+
+  // Restaurar um jogo previamente ocultado
+  const handleUnhideGame = (hiddenGame) => {
+    if (!hiddenGame) return;
+    unhideHubGame(hiddenGame.id);
+    const updatedHidden = getHiddenHubGames();
+    setHiddenGames(updatedHidden);
+
+    // Recarrega os jogos da plataforma do jogo restaurado
+    if (hiddenGame.platformId) {
+      handleScanPlatform(hiddenGame.platformId);
     }
   };
 
@@ -392,6 +434,21 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
             </button>
           );
         })}
+
+        {/* Botão de Jogos Ocultados */}
+        {hiddenGames.length > 0 && (
+          <button
+            onClick={() => setIsViewingHiddenModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-gamer font-bold tracking-wide transition-all whitespace-nowrap border bg-rose-500/10 border-rose-500/30 text-rose-300 hover:bg-rose-500/20 active-press cursor-pointer"
+            title="Ver e restaurar jogos ocultados do Hub"
+          >
+            <EyeOff className="w-3.5 h-3.5 text-rose-400" />
+            <span>Ocultados</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/40 text-rose-300">
+              {hiddenGames.length}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Controles: Busca, Alternador de Modo (Sanfona vs Grade) e Total */}
@@ -461,6 +518,7 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
                     game={game}
                     vaultGame={vaultGame}
                     onLaunch={handleLaunchGame}
+                    onHideGame={handleHideGame}
                     onCustomizeMedia={(g, vg) => {
                       setCustomizingMediaGame({ game: g, vaultGame: vg });
                     }}
@@ -574,6 +632,7 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
                               game={game}
                               vaultGame={vaultGame}
                               onLaunch={handleLaunchGame}
+                              onHideGame={handleHideGame}
                               onCustomizeMedia={(g, vg) => {
                                 setCustomizingMediaGame({ game: g, vaultGame: vg });
                               }}
@@ -686,6 +745,15 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
           }}
           onClose={() => setCustomizingMediaGame(null)}
           onSave={handleSaveMedia}
+        />
+      )}
+
+      {/* Modal de Jogos Ocultados do Hub */}
+      {isViewingHiddenModal && (
+        <HubHiddenModal
+          hiddenGames={hiddenGames}
+          onUnhideGame={handleUnhideGame}
+          onClose={() => setIsViewingHiddenModal(false)}
         />
       )}
     </div>

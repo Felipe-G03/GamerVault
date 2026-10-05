@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { getGuildData } from '../../services/guildService';
 import { listenToActiveCasts } from '../../services/vaultCastService';
-import FriendVaultModal from './FriendVaultModal';
+import FriendProfileModal from '../profile/FriendProfileModal';
 import GameExpandedModal from '../vault/GameExpandedModal';
 
 export default function GuildView({ user, profile, onGoToProfile, onAddNewGame, onOpenVaultCast }) {
@@ -697,11 +697,12 @@ export default function GuildView({ user, profile, onGoToProfile, onAddNewGame, 
         />
       )}
 
-      {/* Modal para Inspecionar o Vault do Amigo */}
+      {/* Modal para Inspecionar o Perfil Completo do Amigo */}
       {selectedFriend && (
-        <FriendVaultModal
-          friend={selectedFriend}
+        <FriendProfileModal
+          friendId={selectedFriend.id}
           onClose={() => setSelectedFriend(null)}
+          onSelectGame={(g) => setSelectedGame(g)}
         />
       )}
     </div>

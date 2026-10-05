@@ -3,10 +3,58 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  collection,
+  getDocs,
   arrayUnion,
   arrayRemove
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { isFinished } from '../utils/gameUtils';
+
+export const BANNER_THEMES = [
+  {
+    id: 'cyber-grid',
+    name: 'Cyber Grid',
+    gradient: 'from-[#05131a] via-[#092b33] to-[#041c1a]',
+    accentColor: '#10b981',
+    animationClass: 'bg-cyber-grid animate-pulse-slow'
+  },
+  {
+    id: 'synthwave-sunset',
+    name: 'Synthwave Sunset',
+    gradient: 'from-[#180a29] via-[#35103b] to-[#150524]',
+    accentColor: '#ec4899',
+    animationClass: 'bg-gradient-to-r from-purple-900/60 via-pink-900/40 to-indigo-950/80'
+  },
+  {
+    id: 'matrix-rain',
+    name: 'Matrix Stream',
+    gradient: 'from-[#031408] via-[#082914] to-[#020d06]',
+    accentColor: '#22c55e',
+    animationClass: 'bg-gradient-to-br from-emerald-950/90 via-black to-emerald-900/50'
+  },
+  {
+    id: 'aurora-borealis',
+    name: 'Aurora Borealis',
+    gradient: 'from-[#071926] via-[#093539] to-[#0d1f36]',
+    accentColor: '#06b6d4',
+    animationClass: 'bg-gradient-to-r from-cyan-950/80 via-teal-900/50 to-blue-950/80'
+  },
+  {
+    id: 'crimson-void',
+    name: 'Crimson Void',
+    gradient: 'from-[#1c0608] via-[#380e12] to-[#150406]',
+    accentColor: '#ef4444',
+    animationClass: 'bg-gradient-to-r from-red-950/90 via-rose-950/50 to-zinc-950'
+  },
+  {
+    id: 'midnight-gold',
+    name: 'Midnight Gold',
+    gradient: 'from-[#171306] via-[#2d2208] to-[#120f04]',
+    accentColor: '#eab308',
+    animationClass: 'bg-gradient-to-r from-amber-950/80 via-yellow-950/40 to-stone-950'
+  }
+];
 
 /**
  * Obtém os dados de perfil do usuário (/profiles/{userId})
@@ -110,4 +158,71 @@ export async function getFriendsDetails(friendIds = []) {
     }
   }
   return profiles;
+}
+
+/**
+ * Atualiza todos os dados de personalização do perfil
+ */
+export async function updateFullProfile(userId, { nickname, avatar, customAvatarUrl, bannerTheme, customBannerUrl, bio, showcases }) {
+  if (!db || !userId) throw new Error('Usuário inválido');
+  const profileRef = doc(db, 'profiles', userId);
+
+  const payload = {
+    updatedAt: new Date().toISOString()
+  };
+
+  if (nickname !== undefined) payload.nickname = nickname.trim();
+  if (avatar !== undefined) payload.avatar = avatar;
+  if (customAvatarUrl !== undefined) payload.customAvatarUrl = customAvatarUrl.trim();
+  if (bannerTheme !== undefined) payload.bannerTheme = bannerTheme;
+  if (customBannerUrl !== undefined) payload.customBannerUrl = customBannerUrl.trim();
+  if (bio !== undefined) payload.bio = bio.trim();
+  if (showcases !== undefined) payload.showcases = showcases;
+
+  await updateDoc(profileRef, payload);
+  return true;
+}
+
+/**
+ * Carrega perfil completo e jogos zerados de um amigo
+ */
+export async function getFriendProfileWithGames(friendId) {
+  if (!db || !friendId) return null;
+
+  try {
+    const profileSnap = await getDoc(doc(db, 'profiles', friendId));
+    if (!profileSnap.exists()) return null;
+
+    const profileData = { id: profileSnap.id, ...profileSnap.data() };
+
+    // Busca jogos zerados do amigo
+    const gamesRef = collection(db, 'users', friendId, 'games');
+    const gamesSnap = await getDocs(gamesRef);
+
+    const completedGames = [];
+    gamesSnap.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (isFinished(data.status)) {
+        completedGames.push({
+          id: docSnap.id,
+          ...data
+        });
+      }
+    });
+
+    // Ordena os jogos zerados por data de conclusão descrescente
+    completedGames.sort((a, b) => {
+      const dateA = a.dateFinished || a.yearFinished || '';
+      const dateB = b.dateFinished || b.yearFinished || '';
+      return String(dateB).localeCompare(String(dateA));
+    });
+
+    return {
+      profile: profileData,
+      completedGames
+    };
+  } catch (err) {
+    console.error('Erro ao buscar perfil com jogos do amigo:', err);
+    throw err;
+  }
 }

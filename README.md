@@ -28,35 +28,49 @@ O **Gamer's Vault** transforma sua relação com os jogos em algo leve, visual e
 
 ## 🌟 Principais Recursos
 
-### 1. 📡 VaultCast: Transmissões ao Vivo na Guilda
+### 1. ⚡ In-Game Mini Overlay (`Alt + O`)
+* **Barra Horizontal Concisa e Translúcida:** Projetada em vidro escuro flutuante sobre os jogos, exibida ou oculta com o atalho global `Alt + O`.
+* **Bloco de Notas por Jogo (Game Notes):** Anotações salvas localmente vinculadas a cada executável/jogo para guardar senhas de portas, coordenadas, builds e puzzles sem sair da partida.
+* **Central de Dicas Rápidas:** Acesso instantâneo a guias, mapas e walkthroughs de puzzles (IGN Walkthroughs, Guias da Steam e YouTube).
+* **Contador de Espectadores & Cronômetro de Sessão:** Acompanhe a duração da jogatina e monitore espectadores ao vivo na live.
+
+### 2. 👤 Perfil Gamer 2.0 & Vitrines Personalizadas
+* **Identidade Visual:** Banners animados em gradientes cyberpunk/synthwave ou GIFs customizados, além de avatares estilizados de pilotos.
+* **Vitrines Customizadas ("Showcases"):** Crie coleções temáticas com jogos em destaque e notas pessoais (ex: *"Top 5 Obras de Arte"*, *"Nunca jogue esses jogos"*, *"Mais difíceis que já platinei"*).
+* **Galeria de Jogos Zerados:** Visualização completa e limpa dos títulos finalizados, notas dadas e horas investidas.
+* **Exploração de Perfis da Guilda:** Clique em qualquer amigo na Guilda para abrir seu perfil rico com banners dinâmicos, vitrines e biblioteca de zerados.
+
+### 3. 📡 VaultCast: Transmissões ao Vivo na Guilda
 * **Streaming de Baixíssima Latência:** Transmissão de vídeo via WebRTC com suporte híbrido (LiveKit SFU de alta escala e Mesh P2P).
+* **Limpeza Automática no LiveKit Cloud via IPC:** Destruição garantida das salas na nuvem ao encerrar a transmissão, sem depender de scripts manuais.
+* **Watchdog de Janela e Kill-Switch Global:** Detecção automática quando o jogo for fechado e botão de emergência na barra superior e bandeja (System Tray) para encerramento com 1 clique.
 * **Áudio Exclusivo por Processo (WASAPI Nativo):** Captura isolada do áudio do jogo através de um helper nativo Windows (`get_window_pid.exe` em Win32 C#). Seus amigos ouvem apenas o som do jogo, sem eco de chamadas do Discord, vídeos de fundo ou notificações do sistema.
 * **Notificação Automática via Webhook:** Avisos automáticos no canal do Discord da sua guilda quando alguém começa a transmitir.
 
-### 2. 🕹️ Gamers Hub: Lançador Unificado de Jogos
+### 4. 🕹️ Gamers Hub: Lançador Unificado de Jogos
 * **Scanner Automático Multiplataforma:** Localiza seus jogos instalados na **Steam**, **Epic Games Store**, **EA App**, **Xbox Game Pass** e **Ubisoft Connect**.
 * **Lançamento com 1 Clique:** Execute qualquer jogo diretamente do Gamer's Vault.
 * **Atalho Global de Teclado (`Alt + Espaço`):** Abra o aplicativo instantaneamente de qualquer lugar, mesmo com outro jogo em tela cheia.
 * **Modo Standby de Zero Consumo:** Quando minimizado na bandeja do sistema (System Tray), o app suspende todas as animações, áudios e renderizações para **0% de uso de CPU e GPU**.
 
-### 3. 📚 Sala de Recordações & Backlog
+### 5. 📚 Sala de Recordações & Backlog
 * **Coleções Anuais:** Histórico organizado por ano de conclusão com total de horas investidas e médias de notas.
 * **Coleção de Dropados / Abandonados:** Registre os títulos que você decidiu não continuar, com horas jogadas e motivo do abandono (sem julgamentos e sem exigência de nota).
 * **Botão "Finalizei esse jogo!":** Retome um jogo dropado a qualquer momento e converta-o em finalizado com resenha e avaliação completa.
 * **Filtros e Ordenações:** Classifique por tempo jogado, nota pessoal, pontuação do Metacritic ou ordem alfabética.
 
-### 4. 🛡️ A Guilda Social
+### 6. 🛡️ A Guilda Social
 * **Feed de Atividades em Tempo Real:** Acompanhe o que seus amigos estão jogando, zerando ou abandonando.
 * **Pódios Descontraídos:** Rankings dinâmicos de quem jogou mais horas, quem zerou mais jogos e quem acumulou mais drops.
-* **Espiar Coleção:** Navegue pela biblioteca dos seus amigos para descobrir novas recomendações sinceras.
+* **Visitação de Perfis Completos:** Navegue pelas vitrines e coleções dos seus amigos diretamente do feed.
 
-### 5. 🔍 Catálogo Global & Mídia
+### 7. 🔍 Catálogo Global & Mídia
 * **Base de Dados RAWG API:** Mais de 500 mil jogos com carrosséis temáticos e traduções automáticas para português.
 * **Trailers Embutidos (YouTube Data API v3):** Assista a gameplays e trailers oficiais dentro do próprio aplicativo.
 * **Trilhas Sonoras & BGM:** Player de música ambiente com suporte a faixas personalizadas (`public/bgm/`) e temas individuais por jogo.
 * **6 Temas Visuais Personalizados:** Cyber Emerald, Electric Cyan, Midnight Violet, Solar Amber, Synthwave Void e Blood Crimson.
 
-### 6. 🔄 Sistema de Atualizações Automáticas & Manuais
+### 8. 🔄 Sistema de Atualizações Automáticas & Manuais
 * **Detecção Automática:** Verificação de novas versões ao iniciar via Firebase Firestore.
 * **Busca Manual a Qualquer Momento:** Botão de verificação instantânea na barra superior e na aba de Configurações do Sistema.
 * **Download Transparente:** Atualização direta via Dropbox com barra de progresso e instalação automatizada.

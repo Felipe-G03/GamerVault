@@ -64,6 +64,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('deep-link:received', handler);
   },
   generateLiveKitToken: (params) => ipcRenderer.invoke('livekit:generate-token', params),
+  deleteLiveKitRoom: (params) => ipcRenderer.invoke('livekit:delete-room', params),
+  sendBroadcastState: (state) => ipcRenderer.send('vaultcast:broadcast-state', state),
+  onBroadcastState: (callback) => {
+    const handler = (_event, state) => callback(state);
+    ipcRenderer.on('vaultcast:broadcast-state', handler);
+    return () => ipcRenderer.removeListener('vaultcast:broadcast-state', handler);
+  },
+  onForceStopBroadcast: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('vaultcast:force-stop', handler);
+    return () => ipcRenderer.removeListener('vaultcast:force-stop', handler);
+  },
+  onTriggerStartLive: (callback) => {
+    const handler = (_event, game) => callback(game);
+    ipcRenderer.on('vaultcast:trigger-start-live', handler);
+    return () => ipcRenderer.removeListener('vaultcast:trigger-start-live', handler);
+  },
+  // In-Game Overlay IPC
+  requestStartLive: (game) => ipcRenderer.send('overlay:request-start-live', game),
+  requestStopLive: () => ipcRenderer.send('overlay:request-stop-live'),
+  getActiveGame: () => ipcRenderer.invoke('overlay:get-active-game'),
+  onActiveGameChanged: (callback) => {
+    const handler = (_event, game) => callback(game);
+    ipcRenderer.on('overlay:active-game-changed', handler);
+    return () => ipcRenderer.removeListener('overlay:active-game-changed', handler);
+  },
+  getGameNotes: (gameKey) => ipcRenderer.invoke('overlay:get-game-notes', gameKey),
+  saveGameNotes: (params) => ipcRenderer.invoke('overlay:save-game-notes', params),
+  setOverlayExpanded: (isExpanded) => ipcRenderer.send('overlay:set-expanded', isExpanded),
+  hideOverlay: () => ipcRenderer.send('overlay:hide'),
   // Controle de janelas filhas popout
   setWindowSize: (width, height) => ipcRenderer.send('window-set-size', { width, height }),
   setAlwaysOnTop: (flag) => ipcRenderer.send('window-set-always-on-top', flag),

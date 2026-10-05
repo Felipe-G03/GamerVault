@@ -9,6 +9,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { getLiveKitConfig } from './livekitService';
 
 const CASTS_COLLECTION = 'vaultcasts';
 
@@ -33,6 +34,15 @@ export async function registerCastSession({ castId, pilotId, pilotName, gameTitl
       startedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+
+    if (window.electronAPI?.sendBroadcastState) {
+      window.electronAPI.sendBroadcastState({
+        isBroadcasting: true,
+        castId,
+        gameTitle: gameTitle || 'Gameplay'
+      });
+    }
+
     return castId;
   } catch (err) {
     console.error('Erro ao registrar sessão do VaultCast no Firestore:', err);
@@ -44,13 +54,39 @@ export async function registerCastSession({ castId, pilotId, pilotName, gameTitl
  * Encerra uma sessão do VaultCast
  */
 export async function endCastSession(castId) {
-  if (!db || !castId) return;
+  if (!castId) return;
 
   try {
-    const docRef = doc(db, CASTS_COLLECTION, castId);
-    await deleteDoc(docRef);
+    if (db) {
+      const docRef = doc(db, CASTS_COLLECTION, castId);
+      await deleteDoc(docRef);
+    }
   } catch (err) {
-    console.error('Erro ao encerrar sessão do VaultCast:', err);
+    console.error('Erro ao encerrar sessão do VaultCast no Firestore:', err);
+  }
+
+  // Notifica o System Tray do Electron
+  if (window.electronAPI?.sendBroadcastState) {
+    window.electronAPI.sendBroadcastState({
+      isBroadcasting: false,
+      castId: null,
+      gameTitle: ''
+    });
+  }
+
+  // Deleta a sala na nuvem do LiveKit Cloud
+  try {
+    if (window.electronAPI?.deleteLiveKitRoom) {
+      const lkConfig = getLiveKitConfig?.() || {};
+      await window.electronAPI.deleteLiveKitRoom({
+        url: lkConfig.url,
+        apiKey: lkConfig.apiKey,
+        apiSecret: lkConfig.apiSecret,
+        roomName: castId
+      });
+    }
+  } catch (lkErr) {
+    console.warn('Erro ao acionar exclusão de sala LiveKit na nuvem:', lkErr);
   }
 }
 
