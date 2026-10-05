@@ -12,7 +12,8 @@ import {
   Calendar,
   AlertTriangle,
   Loader2,
-  Flame
+  Flame,
+  Layers
 } from 'lucide-react';
 import { getFriendProfileWithGames, BANNER_THEMES } from '../../services/profileService';
 
@@ -34,11 +35,18 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
     setError(null);
     try {
       const res = await getFriendProfileWithGames(friendId);
-      if (res) {
+      if (res && res.profile) {
         setProfileData(res.profile);
         setCompletedGames(res.completedGames || []);
       } else {
-        setError('Perfil não encontrado.');
+        // Fallback para exibir ao menos os jogos zerados mesmo se não tiver perfil customizado
+        setProfileData({
+          nickname: 'Piloto da Guilda',
+          bannerTheme: 'cyber-grid',
+          bio: '',
+          showcases: []
+        });
+        setCompletedGames(res?.completedGames || []);
       }
     } catch (err) {
       console.error('Erro ao carregar perfil do amigo:', err);
@@ -55,8 +63,15 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
     setTimeout(() => setCopiedId(false), 2000);
   };
 
-  // Resolução do banner
-  const bannerTheme = BANNER_THEMES.find(b => b.id === profileData?.bannerTheme) || BANNER_THEMES[0];
+  // Resolução do banner com fallback ultra-seguro
+  const defaultBanner = BANNER_THEMES?.[0] || {
+    id: 'cyber-grid',
+    name: 'Cyber Grid',
+    gradient: 'from-[#05131a] via-[#092b33] to-[#041c1a]',
+    accentColor: '#10b981',
+    animationClass: 'bg-cyber-grid animate-pulse-slow'
+  };
+  const bannerTheme = BANNER_THEMES?.find(b => b.id === profileData?.bannerTheme) || defaultBanner;
 
   const showcases = profileData?.showcases || [];
 

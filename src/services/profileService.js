@@ -191,31 +191,63 @@ export async function getFriendProfileWithGames(friendId) {
 
   try {
     const profileSnap = await getDoc(doc(db, 'profiles', friendId));
-    if (!profileSnap.exists()) return null;
+    let profileData = null;
 
-    const profileData = { id: profileSnap.id, ...profileSnap.data() };
+    if (profileSnap.exists()) {
+      profileData = { id: profileSnap.id, ...profileSnap.data() };
+    } else {
+      // Tenta buscar da coleção /users caso ainda não tenha salvo o perfil novo
+      try {
+        const userSnap = await getDoc(doc(db, 'users', friendId));
+        if (userSnap.exists()) {
+          const udata = userSnap.data();
+          profileData = {
+            id: friendId,
+            nickname: udata.displayName || udata.name || 'Piloto da Guilda',
+            avatar: udata.photoURL || null,
+            bannerTheme: 'cyber-grid',
+            bio: '',
+            showcases: []
+          };
+        }
+      } catch (_) {}
+
+      if (!profileData) {
+        profileData = {
+          id: friendId,
+          nickname: 'Piloto da Guilda',
+          bannerTheme: 'cyber-grid',
+          bio: '',
+          showcases: []
+        };
+      }
+    }
 
     // Busca jogos zerados do amigo
-    const gamesRef = collection(db, 'users', friendId, 'games');
-    const gamesSnap = await getDocs(gamesRef);
+    let completedGames = [];
+    try {
+      const gamesRef = collection(db, 'users', friendId, 'games');
+      const gamesSnap = await getDocs(gamesRef);
 
-    const completedGames = [];
-    gamesSnap.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (isFinished(data.status)) {
-        completedGames.push({
-          id: docSnap.id,
-          ...data
-        });
-      }
-    });
+      gamesSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (isFinished(data.status)) {
+          completedGames.push({
+            id: docSnap.id,
+            ...data
+          });
+        }
+      });
 
-    // Ordena os jogos zerados por data de conclusão descrescente
-    completedGames.sort((a, b) => {
-      const dateA = a.dateFinished || a.yearFinished || '';
-      const dateB = b.dateFinished || b.yearFinished || '';
-      return String(dateB).localeCompare(String(dateA));
-    });
+      // Ordena os jogos zerados por data de conclusão descrescente
+      completedGames.sort((a, b) => {
+        const dateA = a.dateFinished || a.yearFinished || '';
+        const dateB = b.dateFinished || b.yearFinished || '';
+        return String(dateB).localeCompare(String(dateA));
+      });
+    } catch (e) {
+      console.warn('Erro ao carregar jogos zerados do amigo:', e);
+    }
 
     return {
       profile: profileData,
