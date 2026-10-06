@@ -1,17 +1,18 @@
 import React from 'react';
-import { Gamepad2, Layers, Dices, Compass, PlusCircle, Users, BarChart3, User, LogOut } from 'lucide-react';
+import { Gamepad2, Layers, Dices, Compass, BadgePercent, PlusCircle, Users, BarChart3, User, LogOut } from 'lucide-react';
 import BgmPlayer from '../common/BgmPlayer';
 
 export default function Navbar({ activeTab, setActiveTab, profile, onLogout }) {
   const tabs = [
     { id: 'vault', label: 'Vault', icon: Gamepad2 },
-    { id: 'hub', label: 'HUB', icon: Layers },
-    { id: 'roleta', label: 'Larga de Frescura', icon: Dices },
-    { id: 'explorar', label: 'Explorar', icon: Compass },
     { id: 'adicionar', label: 'Adicionar Jogo', icon: PlusCircle },
+    { id: 'hub', label: 'HUB', icon: Layers },
+    { id: 'explorar', label: 'Explorar', icon: Compass },
     { id: 'guilda', label: 'Guilda', icon: Users },
     { id: 'estatisticas', label: 'Estatísticas', icon: BarChart3 },
     { id: 'perfil', label: 'Perfil', icon: User },
+    { id: 'roleta', label: 'Larga de Frescura', icon: Dices },
+    { id: 'ofertas', label: 'Ofertas', icon: BadgePercent },
   ];
 
   return (

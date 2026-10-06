@@ -14,6 +14,7 @@ import GuildView from './components/guild/GuildView';
 import StatsView from './components/stats/StatsView';
 import ProfileView from './components/profile/ProfileView';
 import DiscoverView from './components/discover/DiscoverView';
+import DealsRadarView from './components/deals/DealsRadarView';
 import AuthModal from './components/auth/AuthModal';
 import UpdateModal from './components/common/UpdateModal';
 import SettingsModal from './components/layout/SettingsModal';
@@ -21,6 +22,7 @@ import VaultCastModal from './components/vaultcast/VaultCastModal';
 import PatchNotesModal from './components/common/PatchNotesModal';
 import StartupSplash from './components/common/StartupSplash';
 import LargaDeFrescuraView from './components/roulette/LargaDeFrescuraView';
+import DealsAppealCard from './components/deals/DealsAppealCard';
 import { listenToActiveCasts, endCastSession } from './services/vaultCastService';
 import { Loader2, Sparkles } from 'lucide-react';
 
@@ -458,6 +460,13 @@ export default function App() {
                   />
                 )}
 
+                {activeTab === 'ofertas' && (
+                  <DealsRadarView
+                    user={user}
+                    wishlistGames={games.filter(g => g.status === 'Quero Jogar')}
+                  />
+                )}
+
                 {activeTab === 'adicionar' && (
                   <AddGameView
                     editingGame={editingGame}
@@ -517,9 +526,15 @@ export default function App() {
               O que há de novo?
             </span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-              v2.4.0
+              v2.4.1
             </span>
           </button>
+
+          {/* Card Flutuante de Apelo da Loja de Ofertas (Vault, HUB e Guilda) */}
+          <DealsAppealCard
+            activeTab={activeTab}
+            onNavigateToDeals={() => setActiveTab('ofertas')}
+          />
         </>
       )}
     </div>

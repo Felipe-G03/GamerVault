@@ -12,15 +12,43 @@ import {
   Trophy, 
   CheckCircle2,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  BadgePercent
 } from 'lucide-react';
 
 const HIGHLIGHTS = [
   {
+    id: 'deals_radar',
+    icon: BadgePercent,
+    color: 'from-amber-500/20 to-yellow-500/10 text-amber-400 border-amber-500/30',
+    tag: 'RADAR DE OFERTAS',
+    tagColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    title: 'Comparador de Preços em 9 Lojas Oficiais',
+    description: 'Nova aba dedicada que compara promoções em tempo real na Steam, Nuuvem, Epic Games, GOG, Green Man Gaming, Microsoft, Ubisoft, Fanatical e Humble Store em Reais (BRL), com histórico de menor preço e alerta de meta.'
+  },
+  {
+    id: 'deals_curated',
+    icon: ShieldCheck,
+    color: 'from-cyan-500/20 to-blue-500/10 text-cyan-400 border-cyan-500/30',
+    tag: 'CURADORIA DE PESO',
+    tagColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    title: 'Modo Consagrados & Anti-Shovelware',
+    description: 'Algoritmo baseado em Rank Global e reputação Steam que limpa DLCs, trilhas sonoras e jogos descartáveis, apresentando as melhores promoções dos maiores jogos do mundo.'
+  },
+  {
+    id: 'deals_seal',
+    icon: Sparkles,
+    color: 'from-yellow-400/20 to-amber-500/10 text-yellow-300 border-yellow-400/30',
+    tag: 'NOVO DESIGN',
+    tagColor: 'bg-yellow-400/20 text-yellow-200 border-yellow-400/40',
+    title: 'Selo Dourado & Ordem de Abas Renovada',
+    description: 'Um selo dourado compacto no canto da tela avisa sobre descontos enquanto você navega no Vault, HUB ou Guilda. A barra superior agora organiza sua rotina gamer com fluidez.'
+  },
+  {
     id: 'overlay',
     icon: Gamepad2,
     color: 'from-purple-500/20 to-indigo-500/10 text-purple-400 border-purple-500/30',
-    tag: 'NOVIDADE ÉPICA',
+    tag: 'HUD IN-GAME',
     tagColor: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
     title: 'HUD Secreto In-Game (Overlay)',
     description: 'Enquanto joga qualquer game aberto pelo GamerVault, aperte Alt + O para abrir uma barra mágica por cima da sua tela sem precisar minimizar ou dar Alt+Tab.'
@@ -42,51 +70,6 @@ const HIGHLIGHTS = [
     tagColor: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
     title: 'Live Automática para a Guilda',
     description: 'Inicie transmissões com 1 clique direto pelo HUD. E o melhor: ao fechar o jogo, o GamerVault detecta e encerra a live automaticamente para você.'
-  },
-  {
-    id: 'guides',
-    icon: BookOpen,
-    color: 'from-emerald-500/20 to-teal-500/10 text-emerald-400 border-emerald-500/30',
-    tag: 'DETONADOS',
-    tagColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-    title: 'Guias e Dicas Rápidas (IGN)',
-    description: 'Empacou numa missão ou boss difícil? Acesse a aba de Dicas no HUD in-game e encontre guias e detonados direto da IGN sem peso de abas no navegador.'
-  },
-  {
-    id: 'hub_hide',
-    icon: EyeOff,
-    color: 'from-blue-500/20 to-cyan-500/10 text-cyan-400 border-cyan-500/30',
-    tag: 'HUB LIMPO',
-    tagColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-    title: 'Oculte Jogos que Não Quer Ver',
-    description: 'Passe o mouse sobre qualquer jogo no Hub e clique no ícone de olho com risco para escondê-lo. Você pode conferir e restaurar jogos quando quiser no filtro "Ocultados".'
-  },
-  {
-    id: 'hub_lnk',
-    icon: Rocket,
-    color: 'from-green-500/20 to-emerald-500/10 text-green-400 border-green-500/30',
-    tag: 'LAUNCHER ÚNICO',
-    tagColor: 'bg-green-500/20 text-green-300 border-green-500/40',
-    title: 'Suporte a Atalhos (.lnk) e Scripts (.bat)',
-    description: 'Agora você pode adicionar atalhos da sua Área de Trabalho (.lnk) e scripts diretamente no Hub. Deixe de abrir outros launchers: use apenas o GamerVault.'
-  },
-  {
-    id: 'shortcuts',
-    icon: Keyboard,
-    color: 'from-fuchsia-500/20 to-pink-500/10 text-pink-400 border-pink-500/30',
-    tag: 'PERSONALIZAÇÃO',
-    tagColor: 'bg-pink-500/20 text-pink-300 border-pink-500/40',
-    title: 'Personalize os Teclados e Atalhos',
-    description: 'Não curtiu Alt + O ou Alt + Espaço? Acesse Configurações (ícone de engrenagem) e aperte as teclas que preferir ou escolha sugestões como F11, F12 ou Alt+H.'
-  },
-  {
-    id: 'profile',
-    icon: Trophy,
-    color: 'from-amber-400/20 to-orange-500/10 text-amber-300 border-amber-400/30',
-    tag: 'VITRINES',
-    tagColor: 'bg-amber-400/20 text-amber-200 border-amber-400/40',
-    title: 'Troféus e Jogos Favoritos no Perfil',
-    description: 'Monte a sua vitrine de Jogos Zerados e Favoritos na Guilda escolhendo seus jogos do Vault ou pesquisando qualquer jogo da história dos games.'
   }
 ];
 
@@ -95,7 +78,7 @@ export default function PatchNotesModal({ onClose }) {
 
   const handleUnderstand = () => {
     try {
-      localStorage.setItem('gamervault_last_patch_seen', '2.4.0');
+      localStorage.setItem('gamervault_last_patch_seen', '2.4.1');
     } catch (_) {}
     onClose();
   };
@@ -118,7 +101,7 @@ export default function PatchNotesModal({ onClose }) {
                   O QUE HÁ DE NOVO
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold">
-                  v2.4.0 • A Forja do Jogador
+                  v2.4.1 • Radar de Ofertas
                 </span>
               </div>
               <h2 className="text-base sm:text-xl font-gamer font-bold text-white tracking-wide">

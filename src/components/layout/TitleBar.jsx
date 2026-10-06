@@ -42,7 +42,7 @@ export default function TitleBar({ updateInfo, activeCast, onStopActiveCast, onO
         </div>
         <div className="hidden sm:flex items-center gap-1.5 border-l border-border/80 pl-2.5">
           <span className="text-[10px] text-gray-500">
-            v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.4.0'} DESKTOP
+            v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.4.1'} DESKTOP
           </span>
           <button
             onClick={handleManualCheck}
