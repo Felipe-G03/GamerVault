@@ -74,10 +74,24 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
   const bannerTheme = BANNER_THEMES?.find(b => b.id === profileData?.bannerTheme) || defaultBanner;
 
   const showcases = profileData?.showcases || [];
+  const friendColor = profileData?.accentColor || '#10b981';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-[#0c0e14] border border-[#232738] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div
+        className="relative w-full max-w-4xl max-h-[90vh] bg-[#0c0e14] border rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300"
+        style={{
+          borderColor: `${friendColor}40`,
+          boxShadow: `0 0 60px ${friendColor}18, 0 25px 50px -12px rgba(0, 0, 0, 0.7)`
+        }}
+      >
+        {/* Aura atmosférica do perfil do amigo */}
+        <div
+          className="absolute inset-x-0 top-0 h-80 pointer-events-none transition-all duration-700 z-0"
+          style={{
+            background: `radial-gradient(ellipse at 50% 0%, ${friendColor}28 0%, transparent 75%)`
+          }}
+        />
         
         {/* Botão Fechar no Topo */}
         <button
@@ -89,12 +103,12 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
         </button>
 
         {loading ? (
-          <div className="p-16 flex flex-col items-center justify-center gap-3 text-gray-400">
-            <Loader2 className="w-8 h-8 animate-spin text-accent-bright" />
+          <div className="p-16 flex flex-col items-center justify-center gap-3 text-gray-400 relative z-10">
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: friendColor }} />
             <span className="font-mono text-xs">Carregando perfil do jogador...</span>
           </div>
         ) : error ? (
-          <div className="p-12 text-center space-y-4">
+          <div className="p-12 text-center space-y-4 relative z-10">
             <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
             <p className="text-sm font-mono text-gray-300">{error}</p>
             <button
@@ -105,7 +119,7 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
             </button>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
             
             {/* BANNER ANIMADO & CABEÇALHO DO PERFIL */}
             <div className="relative h-44 w-full overflow-hidden flex items-end p-6 border-b border-white/10">
@@ -124,8 +138,14 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
 
               {/* Informações Básicas do Piloto */}
               <div className="relative z-10 flex items-end gap-5">
-                {/* Avatar */}
-                <div className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black/80 flex items-center justify-center text-3xl shrink-0">
+                {/* Avatar com Borda e Brilho na cor do amigo */}
+                <div
+                  className="relative w-20 h-20 rounded-2xl overflow-hidden border-2 shadow-2xl bg-black/80 flex items-center justify-center text-3xl shrink-0 transition-all duration-300"
+                  style={{
+                    borderColor: friendColor,
+                    boxShadow: `0 0 25px ${friendColor}40`
+                  }}
+                >
                   {profileData?.customAvatarUrl || (profileData?.avatar && profileData.avatar.startsWith('http')) ? (
                     <img
                       src={profileData.customAvatarUrl || profileData.avatar}
@@ -146,7 +166,14 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
                     <h2 className="text-xl font-gamer font-bold text-white tracking-wide">
                       {profileData?.nickname || 'Piloto da Guilda'}
                     </h2>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-accent-bright/15 text-accent-bright border border-accent-bright/30">
+                    <span
+                      className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border transition-colors"
+                      style={{
+                        backgroundColor: `${friendColor}18`,
+                        borderColor: `${friendColor}45`,
+                        color: friendColor
+                      }}
+                    >
                       MEMBRO DA GUILDA
                     </span>
                   </div>
@@ -167,7 +194,7 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
                       <span>ID: {friendId.slice(0, 10)}...</span>
                     </button>
 
-                    <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400">
+                    <div className="flex items-center gap-1 text-[10px] font-mono" style={{ color: friendColor }}>
                       <Trophy className="w-3 h-3" />
                       <span>{completedGames.length} jogos zerados</span>
                     </div>
@@ -177,14 +204,14 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
             </div>
 
             {/* BARRA DE NAVEGAÇÃO INTERNA DO PERFIL */}
-            <div className="px-6 border-b border-[#1b1e2c] bg-[#0f111a] flex items-center gap-6">
+            <div className="px-6 border-b border-[#1b1e2c] bg-[#0f111a]/80 backdrop-blur-sm flex items-center gap-6">
               <button
                 onClick={() => setActiveTab('vitrines')}
-                className={`py-3.5 text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
-                  activeTab === 'vitrines'
-                    ? 'border-accent-bright text-accent-bright'
-                    : 'border-transparent text-gray-400 hover:text-gray-200'
-                }`}
+                className="py-3.5 text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer"
+                style={{
+                  borderColor: activeTab === 'vitrines' ? friendColor : 'transparent',
+                  color: activeTab === 'vitrines' ? friendColor : 'rgba(156, 163, 175, 1)'
+                }}
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 Vitrines Personalizadas ({showcases.length})
@@ -192,11 +219,11 @@ export default function FriendProfileModal({ friendId, onClose, onSelectGame }) 
 
               <button
                 onClick={() => setActiveTab('zerados')}
-                className={`py-3.5 text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
-                  activeTab === 'zerados'
-                    ? 'border-accent-bright text-accent-bright'
-                    : 'border-transparent text-gray-400 hover:text-gray-200'
-                }`}
+                className="py-3.5 text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all cursor-pointer"
+                style={{
+                  borderColor: activeTab === 'zerados' ? friendColor : 'transparent',
+                  color: activeTab === 'zerados' ? friendColor : 'rgba(156, 163, 175, 1)'
+                }}
               >
                 <Gamepad2 className="w-3.5 h-3.5" />
                 Jogos Zerados ({completedGames.length})

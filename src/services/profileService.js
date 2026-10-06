@@ -163,7 +163,7 @@ export async function getFriendsDetails(friendIds = []) {
 /**
  * Atualiza todos os dados de personalização do perfil
  */
-export async function updateFullProfile(userId, { nickname, avatar, customAvatarUrl, bannerTheme, customBannerUrl, bio, showcases }) {
+export async function updateFullProfile(userId, { nickname, avatar, customAvatarUrl, bannerTheme, customBannerUrl, bio, showcases, accentColor }) {
   if (!db || !userId) throw new Error('Usuário inválido');
   const profileRef = doc(db, 'profiles', userId);
 
@@ -178,6 +178,7 @@ export async function updateFullProfile(userId, { nickname, avatar, customAvatar
   if (customBannerUrl !== undefined) payload.customBannerUrl = customBannerUrl.trim();
   if (bio !== undefined) payload.bio = bio.trim();
   if (showcases !== undefined) payload.showcases = showcases;
+  if (accentColor !== undefined) payload.accentColor = accentColor.trim();
 
   await updateDoc(profileRef, payload);
   return true;

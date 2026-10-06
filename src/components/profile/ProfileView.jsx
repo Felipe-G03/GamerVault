@@ -32,6 +32,17 @@ import { isFinished } from '../../utils/gameUtils';
 import ShowcaseEditModal from './ShowcaseEditModal';
 import FriendProfileModal from './FriendProfileModal';
 
+const ACCENT_PRESETS = [
+  { name: 'Emerald', hex: '#10b981' },
+  { name: 'Cyan', hex: '#06b6d4' },
+  { name: 'Blue', hex: '#3b82f6' },
+  { name: 'Violet', hex: '#8b5cf6' },
+  { name: 'Pink', hex: '#ec4899' },
+  { name: 'Amber', hex: '#f59e0b' },
+  { name: 'Orange', hex: '#f97316' },
+  { name: 'Crimson', hex: '#ef4444' }
+];
+
 export default function ProfileView({ user, profile, games = [], onProfileUpdated }) {
   // Dados Básicos
   const [nickname, setNickname] = useState(profile?.nickname || '');
@@ -40,6 +51,7 @@ export default function ProfileView({ user, profile, games = [], onProfileUpdate
   const [customAvatarUrl, setCustomAvatarUrl] = useState(profile?.customAvatarUrl || '');
   const [bannerTheme, setBannerTheme] = useState(profile?.bannerTheme || 'cyber-grid');
   const [customBannerUrl, setCustomBannerUrl] = useState(profile?.customBannerUrl || '');
+  const [accentColor, setAccentColor] = useState(profile?.accentColor || '#10b981');
   
   // Vitrines Personalizadas
   const [showcases, setShowcases] = useState(profile?.showcases || []);
@@ -71,6 +83,7 @@ export default function ProfileView({ user, profile, games = [], onProfileUpdate
       setCustomAvatarUrl(profile.customAvatarUrl || '');
       setBannerTheme(profile.bannerTheme || 'cyber-grid');
       setCustomBannerUrl(profile.customBannerUrl || '');
+      setAccentColor(profile.accentColor || '#10b981');
       setShowcases(profile.showcases || []);
     }
     loadFriends();
@@ -105,7 +118,8 @@ export default function ProfileView({ user, profile, games = [], onProfileUpdate
         customAvatarUrl: customAvatarUrl.trim(),
         bannerTheme,
         customBannerUrl: customBannerUrl.trim(),
-        showcases
+        showcases,
+        accentColor
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
@@ -220,24 +234,31 @@ export default function ProfileView({ user, profile, games = [], onProfileUpdate
             <div className={`absolute inset-0 bg-gradient-to-r ${currentTheme.gradient} ${currentTheme.animationClass}`} />
           )}
 
-          {/* Sombra de leitura suave */}
+          {/* Sombra de leitura suave e aura de cor */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d14] via-[#0b0d14]/60 to-transparent" />
+          <div
+            className="absolute inset-0 pointer-events-none transition-all duration-500"
+            style={{ background: `radial-gradient(ellipse at top, ${accentColor}25 0%, transparent 70%)` }}
+          />
 
           {/* Botão de Atalho para Customizar Banner */}
           <button
             onClick={() => setActiveTab('customizacao')}
             className="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 hover:bg-black/90 text-gray-300 hover:text-white border border-white/10 text-xs font-mono backdrop-blur-md transition-all cursor-pointer shadow-lg"
-            title="Personalizar avatar, banner e bio"
+            title="Personalizar avatar, cor, banner e bio"
           >
-            <Palette className="w-3.5 h-3.5 text-accent-bright" />
+            <Palette className="w-3.5 h-3.5" style={{ color: accentColor }} />
             <span>Editar Perfil</span>
           </button>
 
           {/* Identidade do Jogador */}
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-end gap-5 w-full">
             
-            {/* Avatar */}
-            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black/80 flex items-center justify-center text-4xl shrink-0 group">
+            {/* Avatar com Borda e Brilho na cor customizada */}
+            <div 
+              className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 shadow-2xl bg-black/80 flex items-center justify-center text-4xl shrink-0 group transition-all duration-300"
+              style={{ borderColor: accentColor, boxShadow: `0 0 25px ${accentColor}40` }}
+            >
               {customAvatarUrl ? (
                 <img
                   src={customAvatarUrl}
@@ -824,6 +845,147 @@ export default function ProfileView({ user, profile, games = [], onProfileUpdate
                 placeholder="https://exemplo.com/banner-animado.gif"
                 className="w-full px-3.5 py-2 bg-[#151722] border border-[#272a3b] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent-bright"
               />
+            </div>
+          </div>
+
+          {/* ========================================================
+              AURA & COR DE DESTAQUE DO PERFIL (CUSTOM COLOR PICKER)
+              ======================================================== */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-mono uppercase text-gray-300 font-semibold flex items-center gap-2">
+                <Sparkles className="w-4 h-4" style={{ color: accentColor }} />
+                <span>Aura e Cor do Perfil:</span>
+              </label>
+              <span
+                className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-white/5 border border-white/10"
+                style={{ color: accentColor }}
+              >
+                {accentColor.toUpperCase()}
+              </span>
+            </div>
+            <p className="text-[11px] font-mono text-gray-400">
+              Personalize a cor da sua aura gamer. Ela iluminará o fundo e os destaques quando seus amigos visualizarem você na Guilda.
+            </p>
+
+            <div className="p-4 rounded-2xl bg-[#141624] border border-[#23273a] space-y-4">
+              {/* Seletor Livre + Input Hex */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <label className="relative cursor-pointer group flex items-center gap-2.5">
+                    <input
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      className="sr-only"
+                    />
+                    <div
+                      className="w-10 h-10 rounded-xl border-2 shadow-lg transition-transform group-hover:scale-105 flex items-center justify-center cursor-pointer"
+                      style={{
+                        backgroundColor: accentColor,
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                        boxShadow: `0 0 15px ${accentColor}60`
+                      }}
+                    >
+                      <Palette className="w-4 h-4 text-black mix-blend-difference" />
+                    </div>
+                    <span className="text-xs font-mono text-gray-300 group-hover:text-white transition-colors">
+                      Abrir Seletor de Cor Livre
+                    </span>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-gray-400">HEX:</span>
+                  <input
+                    type="text"
+                    value={accentColor}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.startsWith('#') || val.length <= 7) {
+                        setAccentColor(val);
+                      }
+                    }}
+                    placeholder="#10b981"
+                    maxLength={7}
+                    className="w-28 px-2.5 py-1.5 bg-[#0e1017] border border-[#272a3b] rounded-lg text-xs font-mono text-white text-center focus:outline-none focus:border-white/40"
+                  />
+                </div>
+              </div>
+
+              {/* Paletas Gamer Rápidas */}
+              <div className="space-y-1.5 pt-1 border-t border-white/5">
+                <span className="text-[10px] font-mono text-gray-400 uppercase tracking-wider block">
+                  Cores Rápidas da Guilda:
+                </span>
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                  {ACCENT_PRESETS.map((preset) => {
+                    const isSelected = accentColor.toLowerCase() === preset.hex.toLowerCase();
+                    return (
+                      <button
+                        key={preset.hex}
+                        type="button"
+                        onClick={() => setAccentColor(preset.hex)}
+                        className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-white/60 bg-white/10 scale-105 shadow-md'
+                            : 'border-white/5 hover:border-white/20 hover:bg-white/5'
+                        }`}
+                      >
+                        <div
+                          className="w-6 h-6 rounded-lg transition-transform shadow"
+                          style={{
+                            backgroundColor: preset.hex,
+                            boxShadow: isSelected ? `0 0 10px ${preset.hex}` : 'none'
+                          }}
+                        />
+                        <span className="text-[9px] font-mono text-gray-300 text-center leading-tight truncate w-full">
+                          {preset.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Mini Prévia da Aura na Guilda */}
+              <div
+                className="p-3.5 rounded-xl border border-white/10 flex items-center justify-between overflow-hidden relative"
+                style={{
+                  background: `radial-gradient(ellipse at left, ${accentColor}25 0%, rgba(14, 16, 23, 0.95) 70%)`
+                }}
+              >
+                <div className="flex items-center gap-3 relative z-10">
+                  <div
+                    className="w-10 h-10 rounded-xl overflow-hidden border-2 flex items-center justify-center font-gamer font-bold text-white text-base bg-black/60 shadow-md"
+                    style={{ borderColor: accentColor, boxShadow: `0 0 12px ${accentColor}50` }}
+                  >
+                    {customAvatarUrl ? (
+                      <img src={customAvatarUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      nickname?.[0]?.toUpperCase() || 'P'
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs font-gamer font-bold text-white block">
+                      {nickname || 'Seu Nickname'}
+                    </span>
+                    <span className="text-[10px] font-mono" style={{ color: accentColor }}>
+                      Prévia do seu brilho na Guilda
+                    </span>
+                  </div>
+                </div>
+                <span
+                  className="text-[10px] font-mono px-2 py-0.5 rounded border relative z-10"
+                  style={{
+                    backgroundColor: `${accentColor}20`,
+                    borderColor: `${accentColor}50`,
+                    color: accentColor
+                  }}
+                >
+                  AURA ATIVA
+                </span>
+              </div>
             </div>
           </div>
         </form>

@@ -5,7 +5,7 @@ import { isWishlist, isFinished, isDropped } from '../utils/gameUtils';
 /**
  * Busca a atividade recente e calcula métricas consolidadas e comparativas da Guilda
  */
-export async function getGuildData(currentUserId, currentUserNickname, friendIds = []) {
+export async function getGuildData(currentUserId, currentUserNickname, friendIds = [], currentUserProfile = null) {
   if (!db) {
     return { activities: [], leaderboard: [], stats: null };
   }
@@ -30,11 +30,21 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
   for (const member of allMemberIds) {
     try {
       let memberName = member.name;
+      let memberAvatar = null;
+      let memberColor = '#10b981';
 
-      if (!member.isMe) {
+      if (member.isMe) {
+        if (currentUserProfile) {
+          memberAvatar = currentUserProfile.customAvatarUrl || currentUserProfile.avatar || null;
+          memberColor = currentUserProfile.accentColor || '#10b981';
+        }
+      } else {
         const profileSnap = await getDoc(doc(db, 'profiles', member.id));
         if (profileSnap.exists()) {
-          memberName = profileSnap.data().nickname || 'Piloto';
+          const pData = profileSnap.data();
+          memberName = pData.nickname || 'Piloto';
+          memberAvatar = pData.customAvatarUrl || pData.avatar || null;
+          memberColor = pData.accentColor || '#10b981';
         }
       }
 
@@ -42,6 +52,8 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
         id: member.id,
         name: memberName,
         isMe: member.isMe,
+        avatar: memberAvatar,
+        accentColor: memberColor,
         completedCount: 0,
         droppedCount: 0,
         totalHours: 0,
@@ -105,6 +117,8 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
             id: `${member.id}_${docSnap.id}`,
             friendId: member.id,
             friendName: memberName,
+            friendAvatar: memberAvatar,
+            friendColor: memberColor,
             isMe: member.isMe,
             gameId: docSnap.id,
             gameTitle: data.title,
@@ -175,6 +189,8 @@ export async function getGuildData(currentUserId, currentUserNickname, friendIds
             id: `${member.id}_${docSnap.id}`,
             friendId: member.id,
             friendName: memberName,
+            friendAvatar: memberAvatar,
+            friendColor: memberColor,
             isMe: member.isMe,
             gameId: docSnap.id,
             gameTitle: data.title,
