@@ -532,8 +532,8 @@ export default function App() {
             <span className="text-xs font-gamer font-bold tracking-wide">
               O que há de novo?
             </span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-              v2.4.1
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              v2.4.2
             </span>
           </button>
 

@@ -3,73 +3,52 @@ import {
   Sparkles, 
   X, 
   Gamepad2, 
-  StickyNote, 
-  Radio, 
-  BookOpen, 
-  EyeOff, 
-  Rocket, 
-  Keyboard, 
+  Palette, 
+  Crown, 
+  ShieldCheck, 
+  Sliders, 
   Trophy, 
   CheckCircle2,
   ChevronRight,
-  ShieldCheck,
-  BadgePercent
+  Layers
 } from 'lucide-react';
 
 const HIGHLIGHTS = [
   {
-    id: 'deals_radar',
-    icon: BadgePercent,
-    color: 'from-amber-500/20 to-yellow-500/10 text-amber-400 border-amber-500/30',
-    tag: 'RADAR DE OFERTAS',
-    tagColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-    title: 'Comparador de Preços em 9 Lojas Oficiais',
-    description: 'Nova aba dedicada que compara promoções em tempo real na Steam, Nuuvem, Epic Games, GOG, Green Man Gaming, Microsoft, Ubisoft, Fanatical e Humble Store em Reais (BRL), com histórico de menor preço e alerta de meta.'
-  },
-  {
-    id: 'deals_curated',
-    icon: ShieldCheck,
-    color: 'from-cyan-500/20 to-blue-500/10 text-cyan-400 border-cyan-500/30',
-    tag: 'CURADORIA DE PESO',
-    tagColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-    title: 'Modo Consagrados & Anti-Shovelware',
-    description: 'Algoritmo baseado em Rank Global e reputação Steam que limpa DLCs, trilhas sonoras e jogos descartáveis, apresentando as melhores promoções dos maiores jogos do mundo.'
-  },
-  {
-    id: 'deals_seal',
+    id: 'impeccable_design',
     icon: Sparkles,
-    color: 'from-yellow-400/20 to-amber-500/10 text-yellow-300 border-yellow-400/30',
-    tag: 'NOVO DESIGN',
-    tagColor: 'bg-yellow-400/20 text-yellow-200 border-yellow-400/40',
-    title: 'Selo Dourado & Ordem de Abas Renovada',
-    description: 'Um selo dourado compacto no canto da tela avisa sobre descontos enquanto você navega no Vault, HUB ou Guilda. A barra superior agora organiza sua rotina gamer com fluidez.'
+    color: 'from-emerald-500/20 to-teal-500/10 text-emerald-400 border-emerald-500/30',
+    tag: 'DESIGN REVOLUTION',
+    tagColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    title: 'Padrão Impeccable Visual',
+    description: 'Adotamos o Impeccable no design system: contraste aperfeiçoado, dock de navegação flutuante estilo console HUD, ambient lighting duplo e acabamento premium em toda a interface.'
   },
   {
-    id: 'overlay',
-    icon: Gamepad2,
-    color: 'from-blue-600/20 to-cyan-500/10 text-blue-400 border-blue-500/30',
-    tag: 'HUD IN-GAME',
-    tagColor: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
-    title: 'HUD Secreto In-Game (Overlay)',
-    description: 'Enquanto joga qualquer game aberto pelo GamerVault, aperte Alt + O para abrir uma barra mágica por cima da sua tela sem precisar minimizar ou dar Alt+Tab.'
-  },
-  {
-    id: 'notes',
-    icon: StickyNote,
+    id: 'guild_podium',
+    icon: Crown,
     color: 'from-amber-500/20 to-yellow-500/10 text-amber-400 border-amber-500/30',
-    tag: 'ORGANIZAÇÃO',
+    tag: 'HALL DA FAMA',
     tagColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-    title: 'Bloco de Notas por Jogo',
-    description: 'Cada jogo tem agora um caderno de notas individual. Anote senhas de puzzles, builds, coordenadas e lembretes que ficam salvos para sempre no seu PC.'
+    title: 'Pódio Visual Top 3 na Guilda',
+    description: 'A aba Guilda agora conta com um pódio olímpico destacando o 1º MVP com coroa dourada, 2º prata e 3º bronze, além de categorias de ranking intuitivas e cartões com a aura de cada membro.'
   },
   {
-    id: 'live',
-    icon: Radio,
-    color: 'from-rose-500/20 to-red-500/10 text-rose-400 border-rose-500/30',
-    tag: 'COMUNIDADE',
-    tagColor: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
-    title: 'Live Automática para a Guilda',
-    description: 'Inicie transmissões com 1 clique direto pelo HUD. E o melhor: ao fechar o jogo, o GamerVault detecta e encerra a live automaticamente para você.'
+    id: 'profile_aura',
+    icon: Palette,
+    color: 'from-pink-500/20 to-rose-500/10 text-pink-400 border-pink-500/30',
+    tag: 'PERSONALIZAÇÃO',
+    tagColor: 'bg-pink-500/20 text-pink-300 border-pink-500/40',
+    title: 'Seletor de Cor & Aura de Perfil',
+    description: 'Personalize a cor da sua aura por seletor livre ou paletas gamer rápidas. Sua cor ilumina o modal e os destaques quando seus amigos visualizarem seu perfil na guilda.'
+  },
+  {
+    id: 'qol_polish',
+    icon: Sliders,
+    color: 'from-cyan-500/20 to-blue-500/10 text-cyan-400 border-cyan-500/30',
+    tag: 'QUALIDADE DE VIDA',
+    tagColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    title: 'Melhorias de QoL e Fluidez',
+    description: 'Múltiplos refinamentos de usabilidade e performance: cartões de jogos com visual limpo, transições suaves e feed social integrado com identidade visual dos membros.'
   }
 ];
 
@@ -78,7 +57,7 @@ export default function PatchNotesModal({ onClose }) {
 
   const handleUnderstand = () => {
     try {
-      localStorage.setItem('gamervault_last_patch_seen', '2.4.1');
+      localStorage.setItem('gamervault_last_patch_seen', '2.4.2');
     } catch (_) {}
     onClose();
   };
@@ -86,22 +65,22 @@ export default function PatchNotesModal({ onClose }) {
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 select-none">
       <div 
-        className="relative w-full max-w-3xl flex flex-col rounded-2xl bg-[#0c0e14] border border-cyan-500/30 shadow-[0_0_60px_rgba(6,182,212,0.18)] text-white overflow-hidden max-h-[90vh]"
+        className="relative w-full max-w-3xl flex flex-col rounded-2xl bg-[#0c0e14] border border-emerald-500/30 shadow-[0_0_60px_rgba(16,185,129,0.18)] text-white overflow-hidden max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Glow Header */}
-        <div className="relative px-5 sm:px-7 py-5 border-b border-border/70 bg-gradient-to-r from-cyan-950/40 via-surface to-surface-container flex items-center justify-between">
+        <div className="relative px-5 sm:px-7 py-5 border-b border-border/70 bg-gradient-to-r from-emerald-950/40 via-surface to-surface-container flex items-center justify-between">
           <div className="flex items-center gap-3.5">
-            <div className="p-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/40 text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+            <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 font-bold">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
                   O QUE HÁ DE NOVO
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold">
-                  v2.4.1 • Radar de Ofertas
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">
+                  v2.4.2 • Impeccable & QoL
                 </span>
               </div>
               <h2 className="text-base sm:text-xl font-gamer font-bold text-white tracking-wide">
