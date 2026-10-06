@@ -337,9 +337,16 @@ export default function App() {
 
       {/* Brilho Atmosférico Superior do Tema */}
       <div 
-        className="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[360px] pointer-events-none opacity-25 blur-[120px] transition-all duration-700 -z-0"
+        className="fixed top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[400px] pointer-events-none opacity-30 blur-[130px] transition-all duration-700 -z-0"
         style={{
           background: 'radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%)'
+        }}
+      />
+      {/* Brilho Atmosférico Secundário Flutuante */}
+      <div 
+        className="fixed bottom-0 right-0 w-[600px] h-[400px] pointer-events-none opacity-15 blur-[140px] transition-all duration-700 -z-0"
+        style={{
+          background: 'radial-gradient(circle at bottom right, rgba(6, 182, 212, 0.25) 0%, transparent 70%)'
         }}
       />
 

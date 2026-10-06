@@ -40,7 +40,7 @@ export default function GameCard({ game, onClick }) {
   return (
     <div
       onClick={() => onClick(game)}
-      className="group relative flex flex-col rounded-xl overflow-hidden bg-surface border border-border hover:border-accent-bright/60 transition-all duration-300 cursor-pointer shadow-lg hover:shadow-neon-green hover:-translate-y-1 select-none active-press"
+      className="group relative flex flex-col rounded-2xl overflow-hidden bg-surface border border-border/80 hover:border-accent-bright/60 transition-all duration-300 cursor-pointer shadow-md hover:shadow-[0_12px_30px_-5px_rgba(0,0,0,0.8),0_0_20px_-5px_var(--accent-glow)] hover:-translate-y-1 select-none active-press"
     >
       {/* Imagem de Capa do Jogo com Aspect Ratio 16:9 / 3:2 */}
       <div className="relative aspect-video sm:aspect-[16/10] w-full overflow-hidden bg-surface-container">
@@ -52,19 +52,19 @@ export default function GameCard({ game, onClick }) {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-surface-container text-gray-500 text-xs">
+          <div className="w-full h-full flex items-center justify-center bg-surface-container text-zinc-500 font-mono text-xs">
             Sem Imagem
           </div>
         )}
 
         {/* Gradiente escuro no fundo da imagem para legibilidade */}
-        <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-black/30 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/10 to-black/40 pointer-events-none" />
 
-        {/* Badge Circular de Nota (Top Right) */}
+        {/* Badge de Nota com Estilo de Troféu Tático (Top Right) */}
         {!isDrop && !isWish && game.rating > 0 && (
           <div className="absolute top-2.5 right-2.5 z-10">
             <div
-              className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs tracking-tight transition-transform group-hover:scale-110 ${getRatingBadgeClass(
+              className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono font-black text-xs tracking-tight transition-transform duration-200 group-hover:scale-110 shadow-lg border border-white/20 backdrop-blur-md ${getRatingBadgeClass(
                 game.rating
               )}`}
             >
@@ -76,7 +76,7 @@ export default function GameCard({ game, onClick }) {
         {/* Badge de Dropado (Top Right) */}
         {isDrop && (
           <div className="absolute top-2.5 right-2.5 z-10">
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-950/80 border border-amber-600/70 text-[10px] font-mono font-bold text-amber-300 shadow-sm backdrop-blur-md">
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-950/90 border border-amber-500/60 text-[10px] font-mono font-bold text-amber-300 shadow-md backdrop-blur-md">
               <Ban className="w-3 h-3 text-amber-400" />
               DROPADO
             </span>
@@ -86,7 +86,7 @@ export default function GameCard({ game, onClick }) {
         {/* Status Pill (se não for finalizado nem dropado) */}
         {game.status && game.status !== 'Finalizado' && !isDrop && (
           <div className="absolute top-2.5 left-2.5 z-10">
-            <span className="px-2 py-0.5 rounded bg-surface/80 backdrop-blur-sm border border-border text-[10px] font-semibold text-cyan-400">
+            <span className="px-2 py-0.5 rounded-lg bg-surface/90 backdrop-blur-md border border-cyan-500/40 text-[10px] font-mono font-semibold text-cyan-300 shadow-sm">
               {game.status}
             </span>
           </div>
@@ -94,8 +94,8 @@ export default function GameCard({ game, onClick }) {
 
         {/* Ícone de Trilha Sonora Tema se houver */}
         {game.themeUrl && (
-          <div className="absolute bottom-2 left-2.5 z-10 opacity-75 group-hover:opacity-100 transition-opacity">
-            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-[9px] font-mono text-accent-bright border border-accent/30">
+          <div className="absolute bottom-2 left-2.5 z-10 opacity-80 group-hover:opacity-100 transition-opacity">
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[9px] font-mono font-bold text-accent-bright border border-accent/40 shadow-sm">
               <Play className="w-2.5 h-2.5 fill-current" />
               TEMA
             </span>
@@ -106,24 +106,24 @@ export default function GameCard({ game, onClick }) {
       {/* Conteúdo Inferior */}
       <div className="p-3.5 flex flex-col justify-between flex-1">
         {/* Título do Jogo */}
-        <h3 className="text-sm font-bold text-white group-hover:text-accent-bright transition-colors line-clamp-1 leading-snug">
+        <h3 className="text-xs sm:text-sm font-gamer font-bold text-white group-hover:text-accent-bright transition-colors line-clamp-1 leading-snug">
           {game.title}
         </h3>
 
         {/* Informações adicionais (Tempo de Jogo, Data e Metacritic) */}
-        <div className="mt-2 flex items-center justify-between text-xs text-gray-400 font-medium">
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-1 text-amber-500" title="Tempo de jogo">
-              <Clock className="w-3.5 h-3.5" />
-              <span className="text-gray-300 font-mono text-[11px]">
+        <div className="mt-2.5 flex items-center justify-between text-xs text-zinc-400 font-medium border-t border-white/5 pt-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 text-amber-400" title="Tempo de jogo">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-zinc-200 font-mono text-[11px] font-semibold">
                 {game.playtime ? `${String(game.playtime).replace(/h$/i, '').trim()}h` : '0h'}
               </span>
             </div>
 
             {cardDate && (
-              <div className="flex items-center gap-1 text-cyan-400/90" title="Data do jogo">
+              <div className="flex items-center gap-1 text-cyan-400" title="Data do jogo">
                 <Calendar className="w-3 h-3 text-cyan-400" />
-                <span className="text-gray-300 font-mono text-[10px]">
+                <span className="text-zinc-300 font-mono text-[10px]">
                   {cardDate}
                 </span>
               </div>
@@ -132,7 +132,7 @@ export default function GameCard({ game, onClick }) {
 
           {game.metacritic && (
             <span
-              className="text-[10px] font-mono px-1.5 py-0.2 rounded border border-yellow-500/30 text-yellow-400 bg-yellow-500/10"
+              className="text-[10px] font-mono px-1.5 py-0.5 rounded font-black border border-amber-400/40 text-amber-300 bg-amber-400/10"
               title="Metacritic Score"
             >
               MC {game.metacritic}

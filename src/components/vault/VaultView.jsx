@@ -234,17 +234,17 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
   return (
     <div className="space-y-6">
       {/* Barra de Filtros de Status, Busca e Ordenação */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {/* Filtro de Status em Abas */}
-        <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl border border-border overflow-x-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+        {/* Filtro de Status em Abas Segmentadas */}
+        <div className="flex items-center gap-1 p-1 bg-surface-container/80 rounded-2xl border border-white/5 backdrop-blur-md shadow-inner overflow-x-auto scrollbar-none">
           {filterOptions.map(opt => (
             <button
               key={opt.id}
               onClick={() => setStatusFilter(opt.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 active-press cursor-pointer ${
                 statusFilter === opt.id
-                  ? 'bg-surface-high text-white shadow-sm border border-border-bright'
-                  : 'text-gray-400 hover:text-white hover:bg-surface'
+                  ? 'bg-surface-high text-white shadow-sm border border-white/10 font-bold'
+                  : 'text-zinc-400 hover:text-white hover:bg-surface/50'
               }`}
             >
               {opt.label}
@@ -255,34 +255,34 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
         {/* Busca e Ordenação */}
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
           {/* Campo de Busca Rápida */}
-          <div className="relative flex-1 sm:w-56">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <div className="relative flex-1 sm:w-60">
+            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input
               type="text"
-              placeholder="Filtrar jogos..."
+              placeholder="Filtrar por nome ou gênero..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent-bright transition-colors"
+              className="w-full pl-9 pr-3 py-2 bg-surface/80 border border-white/10 focus:border-accent-bright/80 rounded-xl text-xs font-sans text-white placeholder-zinc-500 focus:outline-none transition-all shadow-inner focus:shadow-[0_0_15px_var(--accent-glow)]"
             />
           </div>
 
           {/* Seletor "Ordenar por" */}
-          <div className="flex items-center gap-1.5 bg-surface border border-border px-2.5 py-1.5 rounded-lg">
-            <span className="text-[11px] font-mono text-gray-400 hidden sm:inline">Ordenar:</span>
+          <div className="flex items-center gap-2 bg-surface/80 border border-white/10 px-3 py-2 rounded-xl text-xs text-zinc-300 backdrop-blur-md">
+            <span className="text-[11px] font-mono text-zinc-400 hidden sm:inline">Ordenar:</span>
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
               className="bg-transparent text-xs text-white focus:outline-none cursor-pointer font-medium"
             >
-              <option value="dateFinished" className="bg-surface text-gray-200">Data</option>
-              <option value="rating" className="bg-surface text-gray-200">Nota</option>
-              <option value="playtime" className="bg-surface text-gray-200">Tempo de Jogo</option>
-              <option value="title" className="bg-surface text-gray-200">Título (A-Z)</option>
-              <option value="metacritic" className="bg-surface text-gray-200">Metacritic</option>
+              <option value="dateFinished" className="bg-surface-low text-zinc-200">Data</option>
+              <option value="rating" className="bg-surface-low text-zinc-200">Nota</option>
+              <option value="playtime" className="bg-surface-low text-zinc-200">Tempo de Jogo</option>
+              <option value="title" className="bg-surface-low text-zinc-200">Título (A-Z)</option>
+              <option value="metacritic" className="bg-surface-low text-zinc-200">Metacritic</option>
             </select>
             <button
               onClick={toggleSortOrder}
-              className="p-1 rounded text-gray-400 hover:text-accent-bright transition-colors"
+              className="p-1 rounded-lg text-zinc-400 hover:text-accent-bright transition-colors cursor-pointer"
               title={`Inverter ordem (${sortOrder === 'desc' ? 'Decrescente' : 'Crescente'})`}
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
@@ -292,7 +292,7 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
           {/* Botão Adicionar Jogo */}
           <button
             onClick={onAddGameClick}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition-all shadow-neon-cyan active:scale-95 whitespace-nowrap"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent-bright hover:bg-accent text-black font-gamer font-bold text-xs tracking-wider transition-all shadow-[0_0_20px_var(--accent-glow)] active:scale-95 whitespace-nowrap cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Adicionar Jogo</span>
@@ -315,26 +315,20 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
                   {/* Header da Coleção */}
                   <div
                     onClick={() => toggleYearCollapse(grp.category)}
-                    className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer select-none transition-all shadow-sm group ${
-                      isWishlistGroup
-                        ? 'bg-gradient-to-r from-cyan-950/20 via-surface-container to-surface border-cyan-700/50 hover:border-cyan-400'
-                        : isDroppedGroup
-                          ? 'bg-gradient-to-r from-amber-950/20 via-surface-container to-surface border-amber-800/50 hover:border-amber-500'
-                          : 'bg-gradient-to-r from-surface-high via-surface-container to-surface border-border/90 hover:border-accent/50'
-                    }`}
+                    className="flex items-center justify-between p-4 rounded-2xl border border-white/5 bg-surface-container/60 hover:bg-surface-container/90 backdrop-blur-md cursor-pointer select-none transition-all duration-300 shadow-md group"
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-2 h-7 rounded-full shadow-md ${
                           isWishlistGroup
-                            ? 'bg-cyan-400 shadow-[0_0_10px_#06b6d4]'
+                            ? 'bg-cyan-400 shadow-[0_0_12px_#06b6d4]'
                             : isDroppedGroup
-                              ? 'bg-amber-500 shadow-[0_0_10px_#f59e0b]'
-                              : 'bg-accent-bright shadow-[0_0_10px_#3dd69b]'
+                              ? 'bg-amber-500 shadow-[0_0_12px_#f59e0b]'
+                              : 'bg-accent-bright shadow-[0_0_12px_var(--accent-glow)]'
                         }`}
-                      ></div>
+                      />
                       <div>
-                        <h2 className="text-lg sm:text-xl font-gamer font-bold text-white tracking-wider flex items-center gap-2">
+                        <h2 className="text-base sm:text-lg font-gamer font-bold text-white tracking-wider flex items-center gap-2.5">
                           {isWishlistGroup ? (
                             <span className="flex items-center gap-1.5 text-cyan-300">
                               <Bookmark className="w-4 h-4 fill-current" />
@@ -350,7 +344,7 @@ export default function VaultView({ games = [], onAddGameClick, onEditGame, onDe
                           ) : (
                             <span>Outros / Sem Data</span>
                           )}
-                          <span className="text-xs font-mono font-normal text-gray-400 bg-surface px-2 py-0.5 rounded border border-border">
+                          <span className="text-xs font-mono font-bold text-zinc-300 bg-surface-high/80 px-2.5 py-0.5 rounded-full border border-white/10">
                             {grp.games.length} {grp.games.length === 1 ? 'jogo' : 'jogos'}
                           </span>
                         </h2>
