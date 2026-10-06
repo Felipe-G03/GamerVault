@@ -293,7 +293,7 @@ export default function RatingCalculator({ currentRating, onApplyRating, onAppen
                 <span className="text-[10px] text-gray-400">Trouxe algo inédito ao gênero</span>
               </div>
             </div>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${bonus.innovation ? 'bg-amber-500/20 text-amber-300' : 'bg-surface-high text-gray-500'}`}>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${bonus.innovation ? 'bg-amber-500/20 text-amber-300' : 'bg-surface-high text-white/40'}`}>
               +0.3
             </span>
           </button>
@@ -315,7 +315,7 @@ export default function RatingCalculator({ currentRating, onApplyRating, onAppen
                 <span className="text-[10px] text-gray-400">Dá vontade de zerar de novo</span>
               </div>
             </div>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${bonus.replay ? 'bg-cyan-500/20 text-cyan-300' : 'bg-surface-high text-gray-500'}`}>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${bonus.replay ? 'bg-cyan-500/20 text-cyan-300' : 'bg-surface-high text-white/40'}`}>
               +0.3
             </span>
           </button>
@@ -337,7 +337,7 @@ export default function RatingCalculator({ currentRating, onApplyRating, onAppen
                 <span className="text-[10px] text-gray-400">Valeu cada centavo e minuto</span>
               </div>
             </div>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${bonus.value ? 'bg-emerald-500/20 text-emerald-300' : 'bg-surface-high text-gray-500'}`}>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${bonus.value ? 'bg-emerald-500/20 text-emerald-300' : 'bg-surface-high text-white/40'}`}>
               +0.2
             </span>
           </button>
@@ -348,7 +348,7 @@ export default function RatingCalculator({ currentRating, onApplyRating, onAppen
             onClick={() => setBonus({ ...bonus, pacing: !bonus.pacing })}
             className={`p-2.5 rounded-xl border flex items-center justify-between text-left transition-all ${
               bonus.pacing 
-                ? 'bg-purple-950/30 border-purple-500/60 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.15)]' 
+                ? 'bg-indigo-950/30 border-indigo-500/60 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]' 
                 : 'bg-surface/40 border-border/60 text-gray-400 hover:border-gray-500'
             }`}
           >
@@ -359,7 +359,7 @@ export default function RatingCalculator({ currentRating, onApplyRating, onAppen
                 <span className="text-[10px] text-gray-400">Prende do começo ao fim</span>
               </div>
             </div>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${bonus.pacing ? 'bg-purple-500/20 text-purple-300' : 'bg-surface-high text-gray-500'}`}>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${bonus.pacing ? 'bg-indigo-500/20 text-indigo-300' : 'bg-surface-high text-white/40'}`}>
               +0.2
             </span>
           </button>

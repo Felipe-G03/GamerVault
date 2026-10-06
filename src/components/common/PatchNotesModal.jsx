@@ -47,9 +47,9 @@ const HIGHLIGHTS = [
   {
     id: 'overlay',
     icon: Gamepad2,
-    color: 'from-purple-500/20 to-indigo-500/10 text-purple-400 border-purple-500/30',
+    color: 'from-blue-600/20 to-cyan-500/10 text-blue-400 border-blue-500/30',
     tag: 'HUD IN-GAME',
-    tagColor: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    tagColor: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
     title: 'HUD Secreto In-Game (Overlay)',
     description: 'Enquanto joga qualquer game aberto pelo GamerVault, aperte Alt + O para abrir uma barra mágica por cima da sua tela sem precisar minimizar ou dar Alt+Tab.'
   },
@@ -120,7 +120,7 @@ export default function PatchNotesModal({ onClose }) {
         </div>
 
         {/* Intro Banner */}
-        <div className="px-5 sm:px-7 py-3 bg-gradient-to-r from-accent-bright/10 via-purple-500/10 to-transparent border-b border-border/50 flex items-center gap-3">
+        <div className="px-5 sm:px-7 py-3 bg-gradient-to-r from-accent-bright/10 via-cyan-500/5 to-transparent border-b border-border/50 flex items-center gap-3">
           <ShieldCheck className="w-4 h-4 text-accent-bright shrink-0" />
           <p className="text-xs text-gray-300 font-sans leading-relaxed">
             Preparamos esta versão com foco em praticidade pura: menos janelas abertas, atalhos inteligentes e recursos úteis dentro e fora das suas partidas.
@@ -171,7 +171,7 @@ export default function PatchNotesModal({ onClose }) {
           <button
             type="button"
             onClick={handleUnderstand}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-gamer font-bold tracking-wider shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all active-press"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-gamer font-bold tracking-wider shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all active-press"
           >
             <span>Bora Jogar!</span>
             <ChevronRight className="w-4 h-4" />

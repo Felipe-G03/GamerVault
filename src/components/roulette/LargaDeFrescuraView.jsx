@@ -537,7 +537,7 @@ export default function LargaDeFrescuraView({ games = [], onDirectAddWishlist })
               ) : tournamentWinner ? (
                 /* Campeão do Torneio */
                 <div className="text-center space-y-5 animate-in zoom-in-95 duration-300 py-6 max-w-md w-full">
-                  <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(245,158,11,0.3)] animate-bounce">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(245,158,11,0.3)] animate-pulse">
                     <Trophy className="w-8 h-8" />
                   </div>
                   <div>
@@ -790,7 +790,7 @@ export default function LargaDeFrescuraView({ games = [], onDirectAddWishlist })
                   </div>
                   <button
                     onClick={() => removeRouletteItem(item.id)}
-                    className="p-1 rounded hover:bg-rose-500/20 text-gray-400 hover:text-rose-400 transition-colors"
+                    className="p-1 rounded text-white/60 hover:text-rose-300 hover:bg-rose-950/40 transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -805,7 +805,7 @@ export default function LargaDeFrescuraView({ games = [], onDirectAddWishlist })
       {winnerGame && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="max-w-md w-full bg-surface-low border border-accent-bright/40 rounded-2xl p-6 text-center space-y-4 shadow-[0_0_50px_rgba(0,0,0,0.85)]">
-            <div className="w-14 h-14 rounded-2xl bg-accent-bright/20 border border-accent-bright/40 text-accent-bright flex items-center justify-center mx-auto shadow-md animate-bounce">
+            <div className="w-14 h-14 rounded-2xl bg-accent-bright/20 border border-accent-bright/40 text-accent-bright flex items-center justify-center mx-auto shadow-md animate-pulse">
               <Trophy className="w-7 h-7" />
             </div>
 

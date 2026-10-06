@@ -86,7 +86,7 @@ export default function DealCard({ deal, onClick, onToggleTrack }) {
         <div className="pt-1.5 border-t border-white/5 flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5">
             {deal.cut > 0 && (
-              <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 font-mono font-extrabold text-[11px] shadow-sm">
+              <span className="px-1.5 py-0.5 rounded bg-emerald-400 text-black font-mono font-black text-[11px] shadow-sm">
                 -{deal.cut}%
               </span>
             )}

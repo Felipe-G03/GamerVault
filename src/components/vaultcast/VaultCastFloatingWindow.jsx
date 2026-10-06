@@ -590,7 +590,10 @@ export default function VaultCastFloatingWindow({
             className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize hover:bg-emerald-500/40 rounded-br-2xl transition-colors z-30 flex items-end justify-end p-0.5"
             title="Arraste para redimensionar livremente a janela"
           >
-            <div className="w-2 h-2 border-r-2 border-b-2 border-emerald-400/80 rounded-br-xs" />
+            <svg className="w-2.5 h-2.5 text-emerald-400/80" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <line x1="9" y1="2" x2="2" y2="9" />
+              <line x1="9" y1="6" x2="6" y2="9" />
+            </svg>
           </div>
         </>
       )}

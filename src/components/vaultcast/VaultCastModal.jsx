@@ -895,7 +895,7 @@ export default function VaultCastModal({
                 }
               } catch (_) {}
             }}
-            className="p-1 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-white/60 hover:text-rose-300 hover:bg-rose-950/40 transition-colors cursor-pointer"
             title="Encerrar"
           >
             <Square className="w-3.5 h-3.5 fill-current" />
@@ -1677,14 +1677,14 @@ export default function VaultCastModal({
                       <button
                         onClick={handleDetachWindow}
                         title="Destacar para janela própria no Windows"
-                        className="p-2 rounded-xl bg-black/80 hover:bg-emerald-500 hover:text-black border border-gray-700/80 hover:border-emerald-400 text-gray-300 backdrop-blur-md transition-all shadow-lg cursor-pointer"
+                        className="p-2 rounded-xl bg-black/80 hover:bg-emerald-500 hover:text-black border border-gray-700/80 hover:border-emerald-400 text-white backdrop-blur-md transition-all shadow-lg cursor-pointer"
                       >
                         <ExternalLink className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setWatchingCast(null)}
                         title="Parar de assistir e fechar player"
-                        className="p-2 rounded-xl bg-black/80 hover:bg-rose-600 border border-gray-700/80 hover:border-rose-500 text-gray-300 hover:text-white backdrop-blur-md transition-all shadow-lg cursor-pointer"
+                        className="p-2 rounded-xl bg-black/80 hover:bg-rose-600 border border-gray-700/80 hover:border-rose-500 text-white backdrop-blur-md transition-all shadow-lg cursor-pointer"
                       >
                         <X className="w-4 h-4" />
                       </button>

@@ -11,7 +11,7 @@ export default function DealsAppealCard({ activeTab, onNavigateToDeals }) {
 
   return (
     <div 
-      className="fixed bottom-5 left-5 z-40 select-none animate-bounce-short group"
+      className="fixed bottom-5 left-5 z-40 select-none group transition-transform duration-300 hover:-translate-y-1"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -41,10 +41,10 @@ export default function DealsAppealCard({ activeTab, onNavigateToDeals }) {
           e.stopPropagation();
           setDismissed(true);
         }}
-        className="absolute -top-1.5 -right-1.5 z-50 w-5 h-5 rounded-full bg-slate-900 border border-amber-400/60 text-gray-300 hover:text-white hover:bg-rose-600 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-md cursor-pointer"
+        className="absolute -top-1.5 -right-1.5 z-50 w-5 h-5 rounded-full bg-slate-900 border border-amber-400/60 text-white hover:bg-rose-600 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-md cursor-pointer"
         title="Ocultar selo"
       >
-        <X className="w-3 h-3" />
+        <X className="w-3 h-3 text-white" />
       </button>
 
       {/* Selo Redondo Amarelo / Dourado */}

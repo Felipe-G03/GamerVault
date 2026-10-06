@@ -38,17 +38,29 @@
     transition: background-color 0.35s ease, color 0.35s ease;
   }
 
-  /* Custom Gamer Scrollbar */
+  /* Browser Surfaces Polish (Impeccable) */
+  ::selection {
+    background: rgba(var(--accent-rgb, 16, 185, 129), 0.35);
+    color: #ffffff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-bright, #3dd69b);
+    outline-offset: 2px;
+  }
+
+  /* Custom Sleek Gamer Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--surface-low, #06100b);
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--border-default, #193829);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: var(--accent-bright, #3dd69b);
@@ -72,28 +84,28 @@
   box-shadow: 0 0 20px -5px var(--accent-glow);
 }
 
-/* Audio visualizer equalizer bars */
-@keyframes eq-bounce-1 {
+/* Audio visualizer equalizer wave bars */
+@keyframes eq-wave-1 {
   0%, 100% { height: 4px; }
   50% { height: 16px; }
 }
-@keyframes eq-bounce-2 {
+@keyframes eq-wave-2 {
   0%, 100% { height: 12px; }
   50% { height: 6px; }
 }
-@keyframes eq-bounce-3 {
+@keyframes eq-wave-3 {
   0%, 100% { height: 8px; }
   50% { height: 20px; }
 }
-@keyframes eq-bounce-4 {
+@keyframes eq-wave-4 {
   0%, 100% { height: 14px; }
   50% { height: 4px; }
 }
 
-.animate-eq-1 { animation: eq-bounce-1 0.8s ease-in-out infinite; }
-.animate-eq-2 { animation: eq-bounce-2 0.7s ease-in-out infinite 0.15s; }
-.animate-eq-3 { animation: eq-bounce-3 0.9s ease-in-out infinite 0.3s; }
-.animate-eq-4 { animation: eq-bounce-4 0.65s ease-in-out infinite 0.2s; }
+.animate-eq-1 { animation: eq-wave-1 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+.animate-eq-2 { animation: eq-wave-2 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.15s; }
+.animate-eq-3 { animation: eq-wave-3 0.95s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.3s; }
+.animate-eq-4 { animation: eq-wave-4 0.7s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.2s; }
 
 /* Page Transitions (Pure Opacity to keep position: fixed modals pinned to the true viewport) */
 @keyframes page-enter {

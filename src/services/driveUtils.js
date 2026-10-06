@@ -1,6 +1,6 @@
 /**
  * Utilitário para converter links do Google Drive e outros provedores de imagem
- * em URLs diretas renderizáveis em tags <img> sem bloqueios.
+ * em URLs diretas renderizáveis em elementos de imagem sem bloqueios.
  */
 
 export function convertDriveUrl(url) {

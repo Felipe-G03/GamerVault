@@ -202,7 +202,7 @@ export default function DealsRadarView({ user }) {
               {/* Bloco de Preço Grande */}
               <div className="flex items-center gap-4 pt-2">
                 {heroDeal.cut > 0 && (
-                  <div className="px-3.5 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-mono font-extrabold text-lg sm:text-2xl shadow-[0_0_20px_rgba(16,185,129,0.5)]">
+                  <div className="px-3.5 py-1.5 rounded-xl bg-emerald-400 text-black font-mono font-black text-lg sm:text-2xl shadow-[0_0_20px_rgba(16,185,129,0.5)]">
                     -{heroDeal.cut}%
                   </div>
                 )}
@@ -223,7 +223,7 @@ export default function DealsRadarView({ user }) {
                 <button
                   type="button"
                   onClick={() => setSelectedDeal(heroDeal)}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs sm:text-sm font-gamer font-bold tracking-wider shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all active-press"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs sm:text-sm font-gamer font-extrabold tracking-wider shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all active-press"
                 >
                   <ShoppingBag className="w-4 h-4" />
                   <span>Ver Oferta & Comparar Lojas</span>
@@ -266,7 +266,7 @@ export default function DealsRadarView({ user }) {
               onClick={() => { setViewMode('store'); setSearchTerm(''); }}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-gamer font-bold transition-all ${
                 viewMode === 'store'
-                  ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
+                  ? 'bg-cyan-500 text-black font-extrabold shadow-[0_0_15px_rgba(6,182,212,0.3)]'
                   : 'bg-surface hover:bg-surface-high text-gray-300 border border-white/10'
               }`}
             >
@@ -430,7 +430,7 @@ export default function DealsRadarView({ user }) {
           {viewMode === 'tracked' && (
             <button
               onClick={() => setViewMode('store')}
-              className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-gamer font-bold transition-all shadow-md"
+              className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-gamer font-extrabold transition-all shadow-md"
             >
               Explorar Ofertas da Loja
             </button>

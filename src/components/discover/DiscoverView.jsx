@@ -528,7 +528,7 @@ export default function DiscoverView({ games = [], onDirectAddWishlist, onSelect
                             handleQuickAddWishlist(game);
                           }}
                           disabled={isBeingAdded}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-surface-high hover:bg-cyan-950/40 text-gray-300 hover:text-cyan-300 border border-border hover:border-cyan-500/50 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-surface-high hover:bg-cyan-950/60 text-white/90 hover:text-cyan-200 border border-border hover:border-cyan-500/50 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                           title="Salvar na sua Lista de Desejos com 1 clique"
                         >
                           {isBeingAdded ? (

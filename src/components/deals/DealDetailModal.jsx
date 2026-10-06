@@ -246,7 +246,7 @@ export default function DealDetailModal({ deal, onClose, onTrackChanged, userId 
                         rel="noreferrer"
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-mono font-semibold transition-all ${
                           isBestPrice
-                            ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                            ? 'bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
                             : 'bg-surface-high hover:bg-surface-mid border-border text-white hover:text-cyan-300'
                         }`}
                       >
@@ -261,10 +261,10 @@ export default function DealDetailModal({ deal, onClose, onTrackChanged, userId 
           </div>
 
           {/* Rastrear Preço / Alerta */}
-          <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-500/30 space-y-3">
+          <div className="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-purple-400" />
+                <Bell className="w-4 h-4 text-amber-400" />
                 <h4 className="text-xs font-gamer font-bold text-white">
                   Rastreamento & Meta de Preço
                 </h4>
@@ -274,11 +274,11 @@ export default function DealDetailModal({ deal, onClose, onTrackChanged, userId 
                 onClick={handleToggleTrack}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
                   tracked
-                    ? 'bg-purple-500/20 border border-purple-400 text-purple-300'
-                    : 'bg-surface border border-border hover:border-purple-400 text-gray-300'
+                    ? 'bg-amber-500/20 border border-amber-400 text-amber-300'
+                    : 'bg-surface border border-border hover:border-amber-400 text-gray-300'
                 }`}
               >
-                {tracked ? <Check className="w-3.5 h-3.5 text-purple-400" /> : <Bell className="w-3.5 h-3.5" />}
+                {tracked ? <Check className="w-3.5 h-3.5 text-amber-400" /> : <Bell className="w-3.5 h-3.5" />}
                 <span>{tracked ? 'Rastreando' : 'Rastrear este jogo'}</span>
               </button>
             </div>
@@ -294,13 +294,13 @@ export default function DealDetailModal({ deal, onClose, onTrackChanged, userId 
                   placeholder="Ex: 50.00"
                   value={targetPrice}
                   onChange={(e) => setTargetPrice(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-black/40 border border-border text-xs font-mono text-white focus:outline-none focus:border-purple-400"
+                  className="w-full px-3 py-1.5 rounded-lg bg-black/40 border border-border text-xs font-mono text-white focus:outline-none focus:border-amber-400"
                 />
               </div>
               <button
                 type="submit"
                 disabled={savingTarget}
-                className="mt-5 px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-mono font-bold transition-colors"
+                className="mt-5 px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-mono font-extrabold transition-colors"
               >
                 Salvar Meta
               </button>

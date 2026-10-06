@@ -619,7 +619,7 @@ export default function DiscoverGameModal({
                       onAddToWishlist(game);
                       onClose();
                     }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-high hover:bg-cyan-950/40 text-gray-300 hover:text-cyan-300 border border-border hover:border-cyan-500/50 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-high hover:bg-cyan-950/60 text-white/90 hover:text-cyan-200 border border-border hover:border-cyan-500/50 text-xs font-semibold transition-all active:scale-95 cursor-pointer"
                   >
                     <Bookmark className="w-3.5 h-3.5 text-cyan-400" />
                     <span>Lista de Desejos</span>

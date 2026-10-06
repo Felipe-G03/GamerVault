@@ -83,7 +83,7 @@ export default function TitleBar({ updateInfo, activeCast, onStopActiveCast, onO
             className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 hover:text-cyan-300 font-mono text-[10px] font-bold tracking-wider transition-all shadow-[0_0_12px_rgba(6,182,212,0.25)] hover:shadow-[0_0_18px_rgba(6,182,212,0.45)] active:scale-95 group cursor-pointer"
             title="Nova versão disponível! Clique para atualizar."
           >
-            <Rocket className="w-3 h-3 text-cyan-400 group-hover:animate-bounce" />
+            <Rocket className="w-3 h-3 text-cyan-400 group-hover:-translate-y-0.5 group-hover:scale-110 transition-transform duration-200" />
             <span className="tracking-wide">ATUALIZAÇÃO v{updateInfo.latestVersion} DISPONÍVEL</span>
           </button>
         )}
@@ -120,10 +120,10 @@ export default function TitleBar({ updateInfo, activeCast, onStopActiveCast, onO
             </button>
             <button
               onClick={handleClose}
-              className="w-8 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-600/90 rounded transition-colors"
+              className="w-8 h-7 flex items-center justify-center text-white/70 hover:text-white hover:bg-rose-600 rounded transition-colors group"
               title="Fechar"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5 group-hover:text-white" />
             </button>
           </div>
         )}

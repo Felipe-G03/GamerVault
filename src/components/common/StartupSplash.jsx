@@ -87,7 +87,7 @@ export default function StartupSplash({ onFinish }) {
             {/* Halo de Brilho Neon */}
             <div className="absolute inset-0 rounded-full bg-accent-bright/20 blur-3xl scale-150 animate-pulse" />
             <div className="relative w-20 h-20 rounded-2xl bg-[#090b10] border border-accent-bright/40 flex items-center justify-center shadow-[0_0_35px_rgba(61,214,155,0.25)]">
-              <Gamepad2 className="w-10 h-10 text-accent-bright animate-bounce" style={{ animationDuration: '2s' }} />
+              <Gamepad2 className="w-10 h-10 text-accent-bright animate-pulse" />
             </div>
           </div>
 

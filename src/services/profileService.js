@@ -24,7 +24,7 @@ export const BANNER_THEMES = [
     name: 'Synthwave Sunset',
     gradient: 'from-[#180a29] via-[#35103b] to-[#150524]',
     accentColor: '#ec4899',
-    animationClass: 'bg-gradient-to-r from-purple-900/60 via-pink-900/40 to-indigo-950/80'
+    animationClass: 'bg-gradient-to-r from-[#240e3f]/70 via-[#3a0d38]/50 to-[#120424]/90'
   },
   {
     id: 'matrix-rain',
