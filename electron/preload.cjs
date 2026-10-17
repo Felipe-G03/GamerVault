@@ -94,6 +94,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveGameNotes: (params) => ipcRenderer.invoke('overlay:save-game-notes', params),
   setOverlayExpanded: (isExpanded) => ipcRenderer.send('overlay:set-expanded', isExpanded),
   hideOverlay: () => ipcRenderer.send('overlay:hide'),
+  focusOverlay: () => ipcRenderer.send('overlay:focus'),
+  focusGame: () => ipcRenderer.send('overlay:focus-game'),
+  toggleOverlay: () => ipcRenderer.send('overlay:toggle'),
+  getOverlayMode: () => ipcRenderer.invoke('overlay:get-mode'),
+  setOverlayMode: (mode) => ipcRenderer.send('overlay:set-mode', mode),
+  cycleOverlayMode: () => ipcRenderer.send('overlay:cycle-mode'),
+  onOverlayModeChanged: (callback) => {
+    const handler = (_event, mode) => callback(mode);
+    ipcRenderer.on('overlay:mode-changed', handler);
+    return () => ipcRenderer.removeListener('overlay:mode-changed', handler);
+  },
+  // Playtimes IPC
+  getPlaytimes: () => ipcRenderer.invoke('hub:get-playtimes'),
+  getGamePlaytime: (gameTitle) => ipcRenderer.invoke('hub:get-game-playtime', gameTitle),
+  updateGamePlaytime: (params) => ipcRenderer.invoke('hub:update-game-playtime', params),
+  onPlaytimeUpdated: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('hub:playtime-updated', handler);
+    return () => ipcRenderer.removeListener('hub:playtime-updated', handler);
+  },
   // Controle de janelas filhas popout
   setWindowSize: (width, height) => ipcRenderer.send('window-set-size', { width, height }),
   setAlwaysOnTop: (flag) => ipcRenderer.send('window-set-always-on-top', flag),

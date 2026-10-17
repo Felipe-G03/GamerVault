@@ -28,8 +28,14 @@ let tray = null;
 let currentActiveCast = null;
 let currentActiveGame = null;
 let activeGamePid = null;
+let activeGameHwnd = null;
 let activeGameWatchdog = null;
 let activeGameProcess = null;
+let activeGameLaunchGraceUntil = 0;
+let activeGameConsecutiveMissing = 0;
+let overlayUserWantedVisible = true;
+let overlayMode = 'compact'; // 'compact' | 'expanded' | 'hidden'
+let overlayIsNotesExpanded = false;
 let pendingDeepLinkUrl = process.argv.find(arg => typeof arg === 'string' && arg.startsWith('gamervault://')) || null;
 app.isQuitting = false;
 
@@ -84,7 +90,9 @@ const DEFAULT_SETTINGS = {
   startMinimized: false,
   minimizeToTray: true,
   globalShortcut: 'Alt+Space',
-  overlayShortcut: 'Alt+O'
+  overlayShortcut: 'Alt+O',
+  overlayFpsPosition: 'top-right',
+  startMuted: false
 };
 
 function loadSettings() {
@@ -205,31 +213,264 @@ function applyStartupSettings(openAtLogin, startMinimized) {
   }
 }
 
+function getHelperExePath() {
+  const candidates = [
+    path.join(__dirname, 'bin', 'get_window_pid.exe'),
+    path.join(process.resourcesPath || '', 'bin', 'get_window_pid.exe'),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'electron', 'bin', 'get_window_pid.exe'),
+    path.join(__dirname, '..', 'electron', 'bin', 'get_window_pid.exe')
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch (_) {}
+  }
+  return null;
+}
+
+// ==========================================
+// CONTADOR DE TEMPO DE JOGO DO GAMER'S HUB
+// ==========================================
+const PLAYTIMES_FILE = path.join(app.getPath('userData'), 'gamer_vault_playtimes.json');
+
+function normalizeGameKey(titleOrGame) {
+  const title = typeof titleOrGame === 'object' ? (titleOrGame.title || titleOrGame.id || '') : String(titleOrGame || '');
+  return title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '') || 'game';
+}
+
+function loadPlaytimes() {
+  try {
+    if (fs.existsSync(PLAYTIMES_FILE)) {
+      return JSON.parse(fs.readFileSync(PLAYTIMES_FILE, 'utf-8'));
+    }
+  } catch (e) {
+    console.error('Erro ao carregar playtimes:', e);
+  }
+  return {};
+}
+
+function savePlaytimes(data) {
+  try {
+    fs.writeFileSync(PLAYTIMES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Erro ao salvar playtimes:', e);
+  }
+}
+
+function accumulateGamePlaytime(game, forceSeconds = null) {
+  if (!game || !game.title) return null;
+  const key = normalizeGameKey(game.title);
+  const playtimes = loadPlaytimes();
+  const currentRecord = playtimes[key] || {
+    title: game.title,
+    totalSeconds: 0,
+    lastPlayed: Date.now()
+  };
+
+  const now = Date.now();
+  let addedSeconds = 0;
+  if (forceSeconds !== null) {
+    addedSeconds = forceSeconds;
+  } else {
+    const lastSaved = game.lastSavedAt || game.startedAt || now;
+    addedSeconds = Math.max(0, Math.floor((now - lastSaved) / 1000));
+    game.lastSavedAt = now;
+  }
+
+  if (addedSeconds > 0) {
+    currentRecord.totalSeconds = (currentRecord.totalSeconds || 0) + addedSeconds;
+    currentRecord.lastPlayed = now;
+    currentRecord.title = game.title;
+    playtimes[key] = currentRecord;
+    savePlaytimes(playtimes);
+  }
+
+  const sessionSeconds = Math.max(0, Math.floor((now - (game.startedAt || now)) / 1000));
+  const updatePayload = {
+    gameKey: key,
+    title: game.title,
+    sessionSeconds,
+    totalSeconds: currentRecord.totalSeconds
+  };
+
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('hub:playtime-updated', updatePayload);
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('hub:playtime-updated', updatePayload);
+  }
+
+  return updatePayload;
+}
+
+function getOverlayHwnd() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return '0';
+  try {
+    const handleBuf = overlayWindow.getNativeWindowHandle();
+    if (process.arch === 'x64' || process.arch === 'arm64') {
+      return handleBuf.readBigInt64LE().toString();
+    }
+    return handleBuf.readInt32LE().toString();
+  } catch (_) {
+    return '0';
+  }
+}
+
+function applyOverlayNoActivate() {
+  if (process.platform !== 'win32') return;
+  const helperPath = getHelperExePath();
+  if (!helperPath || !fs.existsSync(helperPath)) return;
+  const hwnd = getOverlayHwnd();
+  if (!hwnd || hwnd === '0') return;
+  try {
+    const { execFile } = require('child_process');
+    execFile(helperPath, ['--set-noactivate', String(hwnd)], { timeout: 2500 }, (err) => {
+      if (!err) {
+        console.log(`[GamerVault] WS_EX_NOACTIVATE aplicado com sucesso na janela do Overlay (HWND: ${hwnd})`);
+      }
+    });
+  } catch (err) {
+    console.warn('[GamerVault] Erro ao aplicar WS_EX_NOACTIVATE no overlay:', err?.message);
+  }
+}
+
+function getOverlayBounds(mode = overlayMode, isNotes = overlayIsNotesExpanded) {
+  try {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { x: displayX, y: displayY, width: screenWidth, height: screenHeight } = primaryDisplay.workArea;
+    const corner = appSettings.overlayFpsPosition || 'top-right';
+
+    if (mode === 'compact') {
+      const width = 92;
+      const height = 30;
+      const margin = 16;
+      let x = displayX + screenWidth - width - margin;
+      let y = displayY + margin;
+
+      if (corner === 'top-left') {
+        x = displayX + margin;
+        y = displayY + margin;
+      } else if (corner === 'bottom-left') {
+        x = displayX + margin;
+        y = displayY + screenHeight - height - margin;
+      } else if (corner === 'bottom-right') {
+        x = displayX + screenWidth - width - margin;
+        y = displayY + screenHeight - height - margin;
+      }
+
+      return { x: Math.round(x), y: Math.round(y), width, height };
+    } else {
+      // Expanded HUD (Espaçoso, 780px para comportar todos os botões e contadores sem aperto)
+      const width = 780;
+      const height = isNotes ? 480 : 58;
+      const x = displayX + Math.round((screenWidth - width) / 2);
+      const y = displayY + 16;
+      return { x: Math.round(x), y: Math.round(y), width, height };
+    }
+  } catch (e) {
+    return { x: 100, y: 16, width: 780, height: 58 };
+  }
+}
+
+function updateOverlayBounds() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  try {
+    const bounds = getOverlayBounds(overlayMode, overlayIsNotesExpanded);
+    overlayWindow.setBounds(bounds);
+  } catch (err) {
+    console.error('Erro ao atualizar bounds do overlay:', err);
+  }
+}
+
+function setOverlayMode(newMode) {
+  overlayMode = newMode;
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+
+  if (newMode === 'hidden') {
+    overlayUserWantedVisible = false;
+    overlayWindow.hide();
+    const helperPath = getHelperExePath();
+    if (helperPath && fs.existsSync(helperPath) && (activeGameHwnd || activeGamePid)) {
+      try {
+        const { execFile } = require('child_process');
+        execFile(helperPath, ['--focus-game', String(activeGameHwnd || 0), String(activeGamePid || 0)], { timeout: 1500 }, () => {});
+      } catch (_) {}
+    }
+  } else {
+    overlayUserWantedVisible = true;
+    if (newMode === 'compact') {
+      overlayIsNotesExpanded = false;
+      try {
+        overlayWindow.setFocusable(false);
+        // MODO FPS COMPACTO: 100% IMPOSSÍVEL DE SER CLICADO (CLICK-THROUGH)
+        // Todos os cliques do mouse passam direto para o jogo sem desviar foco!
+        overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+      } catch (_) {}
+    } else {
+      // MODO EXPANDIDO: Permite cliques do mouse nos botões do HUD
+      try {
+        overlayWindow.setIgnoreMouseEvents(false);
+      } catch (_) {}
+    }
+    updateOverlayBounds();
+    if (!overlayWindow.isVisible()) {
+      overlayWindow.showInactive();
+    }
+    applyOverlayNoActivate();
+  }
+
+  overlayWindow.webContents.send('overlay:mode-changed', overlayMode);
+}
+
+function cycleOverlayMode() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    createOverlayWindow();
+    overlayMode = 'compact';
+    setTimeout(() => {
+      setOverlayMode('compact');
+    }, 200);
+    return;
+  }
+
+  // Cycle: compact -> expanded -> hidden -> compact
+  if (!overlayWindow.isVisible() || overlayMode === 'hidden') {
+    setOverlayMode('compact');
+  } else if (overlayMode === 'compact') {
+    setOverlayMode('expanded');
+  } else if (overlayMode === 'expanded') {
+    setOverlayMode('hidden');
+  } else {
+    setOverlayMode('compact');
+  }
+}
+
 function createOverlayWindow() {
   if (overlayWindow && !overlayWindow.isDestroyed()) return;
 
   try {
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: screenWidth } = primaryDisplay.workAreaSize;
-    const initialWidth = 680;
-    const initialHeight = 56;
-    const x = Math.round((screenWidth - initialWidth) / 2);
-    const y = 16;
+    const bounds = getOverlayBounds(overlayMode, overlayIsNotesExpanded);
 
     overlayWindow = new BrowserWindow({
-      width: initialWidth,
-      height: initialHeight,
-      x,
-      y,
+      width: bounds.width,
+      height: bounds.height,
+      x: bounds.x,
+      y: bounds.y,
       frame: false,
       transparent: true,
       alwaysOnTop: true,
       resizable: false,
       skipTaskbar: true,
       show: false,
-      focusable: true,
+      focusable: false, // Inicia como false para NUNCA roubar foco do jogo ao clicar!
       hasShadow: false,
       backgroundColor: '#00000000',
+      type: 'toolbar',
       webPreferences: {
         preload: path.join(__dirname, 'preload.cjs'),
         nodeIntegration: false,
@@ -239,8 +480,14 @@ function createOverlayWindow() {
     });
 
     try {
-      overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+      overlayWindow.setAlwaysOnTop(true, 'screen-saver', 1);
+      overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     } catch (_) {}
+
+    overlayWindow.webContents.setWindowOpenHandler(() => {
+      // NUNCA abre navegadores externos ou janelas que tirem o usuário do jogo!
+      return { action: 'deny' };
+    });
 
     const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
     if (isDev) {
@@ -248,6 +495,16 @@ function createOverlayWindow() {
     } else {
       overlayWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { overlay: 'true' } });
     }
+
+    overlayWindow.webContents.on('did-finish-load', () => {
+      applyOverlayNoActivate();
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('overlay:mode-changed', overlayMode);
+        if (currentActiveGame) {
+          overlayWindow.webContents.send('overlay:active-game-changed', currentActiveGame);
+        }
+      }
+    });
 
     overlayWindow.on('closed', () => {
       overlayWindow = null;
@@ -260,9 +517,17 @@ function createOverlayWindow() {
 function handleGameClosed() {
   if (!currentActiveGame) return;
   console.log(`[GamerVault] Jogo fechado/finalizado: ${currentActiveGame.title}`);
+
+  // Salva o tempo final jogado antes de limpar o estado
+  accumulateGamePlaytime(currentActiveGame);
+
   currentActiveGame = null;
   activeGamePid = null;
+  activeGameHwnd = null;
   activeGameProcess = null;
+  activeGameLaunchGraceUntil = 0;
+  activeGameConsecutiveMissing = 0;
+  overlayUserWantedVisible = true;
 
   if (activeGameWatchdog) {
     clearInterval(activeGameWatchdog);
@@ -275,7 +540,6 @@ function handleGameClosed() {
   }
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('overlay:active-game-changed', null);
-    // Encerra qualquer live ativa do jogo fechado
     mainWindow.webContents.send('vaultcast:force-stop');
   }
 
@@ -288,7 +552,9 @@ function startActiveGameWatchdog() {
     activeGameWatchdog = null;
   }
 
+  const { execFileSync } = require('child_process');
   let checkCount = 0;
+
   activeGameWatchdog = setInterval(async () => {
     if (!currentActiveGame) {
       clearInterval(activeGameWatchdog);
@@ -297,64 +563,130 @@ function startActiveGameWatchdog() {
     }
 
     checkCount++;
+    const isGracePeriod = Date.now() < activeGameLaunchGraceUntil;
+    const helperPath = getHelperExePath();
+    const gameTitle = currentActiveGame.title || '';
+    const gameDir = currentActiveGame.gameDir || '';
 
-    // 1. Verificação por PID no caso de executável direto
+    // 1. Testa se o PID atual continua em execução
+    let isPidAlive = false;
     if (activeGamePid) {
       try {
         process.kill(activeGamePid, 0);
-      } catch (err) {
-        console.log(`[GamerVault] Watchdog: Processo ${activeGamePid} finalizado.`);
-        handleGameClosed();
-        return;
+        isPidAlive = true;
+      } catch (_) {
+        isPidAlive = false;
       }
     }
 
-    // 2. Se for Steam/Epic protocol ou se não houver PID fixo, após os primeiros 10s de inicialização,
-    // verifica se alguma janela com o título do jogo ainda existe
-    if (!activeGamePid && checkCount > 4) {
+    // 2. Se o PID não está vivo OU se estamos no período inicial procurando o processo real (launcher filho ou janela):
+    if ((!isPidAlive || isGracePeriod) && helperPath && fs.existsSync(helperPath)) {
+      try {
+        const parentPidArg = activeGamePid || 0;
+        const res = execFileSync(helperPath, ['--find-game', gameTitle, gameDir, String(parentPidArg)], {
+          encoding: 'utf-8',
+          timeout: 2500
+        });
+        const trimmed = (res || '').trim();
+        if (trimmed) {
+          const parts = trimmed.split('|');
+          const foundPid = parseInt(parts[0], 10);
+          const foundHwnd = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+          if (!isNaN(foundPid) && foundPid > 0) {
+            if (activeGamePid !== foundPid) {
+              console.log(`[GamerVault] Processo do jogo identificado/migrado: PID ${foundPid} (Anterior: ${activeGamePid}) [${parts[2] || ''}]`);
+              activeGamePid = foundPid;
+            }
+            if (foundHwnd > 0) {
+              activeGameHwnd = foundHwnd;
+            }
+            isPidAlive = true;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 3. Fallback adicional via desktopCapturer caso o helper ainda não tenha capturado
+    if (!isPidAlive && !activeGamePid && checkCount > 3) {
       try {
         const sources = await desktopCapturer.getSources({ types: ['window'] });
-        const gameTitleLower = (currentActiveGame.title || '').toLowerCase();
+        const gameTitleLower = gameTitle.toLowerCase();
         const hasWindow = sources.some(s => {
           const nameLower = (s.name || '').toLowerCase();
           return nameLower.includes(gameTitleLower) || gameTitleLower.includes(nameLower);
         });
-
-        if (!hasWindow && checkCount > 6) {
-          console.log(`[GamerVault] Watchdog: Janela do jogo '${currentActiveGame.title}' não encontrada mais.`);
-          handleGameClosed();
+        if (hasWindow) {
+          isPidAlive = true;
         }
       } catch (_) {}
+    }
+
+    // 4. Se o processo está ativo:
+    if (isPidAlive) {
+      activeGameConsecutiveMissing = 0;
+
+      // Acumula tempo de jogo continuamente no banco de dados local
+      accumulateGamePlaytime(currentActiveGame);
+
+      // Verifica se a janela do jogo está em primeiro plano para exibir ou ocultar o Overlay
+      // Passando também o HWND do overlay para não ocultar quando o usuário clicar nele!
+      if (helperPath && fs.existsSync(helperPath) && (activeGamePid || activeGameHwnd)) {
+        try {
+          const checkPid = activeGamePid || 0;
+          const checkHwnd = activeGameHwnd || 0;
+          const overlayHwndVal = getOverlayHwnd() || 0;
+          const electronPidVal = process.pid || 0;
+          const isFocusedRes = execFileSync(helperPath, ['--is-game-focused', String(checkPid), String(checkHwnd), String(overlayHwndVal), String(electronPidVal)], {
+            encoding: 'utf-8',
+            timeout: 1500
+          });
+          const isFocused = (isFocusedRes || '').trim() === '1';
+
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            if (isFocused && overlayUserWantedVisible && overlayMode !== 'hidden') {
+              // Se o jogo está focado e o overlay deve aparecer:
+              // showInactive() exibe o HUD sem roubar foco, NÃO minimizando o jogo!
+              if (!overlayWindow.isVisible()) {
+                updateOverlayBounds();
+                overlayWindow.showInactive();
+                applyOverlayNoActivate();
+              }
+            } else if (!isFocused && overlayWindow.isVisible()) {
+              // Somente oculta automaticamente se estiver no modo COMPACTO (mini HUD de FPS)
+              // No modo EXPANDIDO (HUD completo, Notas, Guia IGN), o overlay NUNCA deve ser ocultado
+              // enquanto o jogo estiver aberto, permitindo ao usuário interagir sem sair da tela!
+              if (overlayMode === 'compact') {
+                overlayWindow.hide();
+              }
+            }
+          }
+        } catch (_) {}
+      } else {
+        // Se não puder checar foco, mas overlay deve iniciar junto com o jogo:
+        if (overlayUserWantedVisible && overlayMode !== 'hidden' && overlayWindow && !overlayWindow.isDestroyed() && !overlayWindow.isVisible()) {
+          updateOverlayBounds();
+          overlayWindow.showInactive();
+          applyOverlayNoActivate();
+        }
+      }
+    } else {
+      // Se não está vivo:
+      if (isGracePeriod) {
+        // Ainda no período de carência do launcher (até 60s)
+        return;
+      }
+
+      activeGameConsecutiveMissing++;
+      if (activeGameConsecutiveMissing >= 3) {
+        console.log(`[GamerVault] Processo/Janela do jogo finalizado.`);
+        handleGameClosed();
+      }
     }
   }, 2500);
 }
 
 function toggleOverlayWindow() {
-  // O HUD só pode abrir se houver um jogo ativo iniciado pelo Gamer's Vault
-  if (!currentActiveGame) {
-    if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
-      overlayWindow.hide();
-    }
-    return;
-  }
-
-  if (!overlayWindow || overlayWindow.isDestroyed()) {
-    createOverlayWindow();
-    setTimeout(() => {
-      if (overlayWindow && !overlayWindow.isDestroyed() && currentActiveGame) {
-        overlayWindow.show();
-        overlayWindow.focus();
-      }
-    }, 400);
-    return;
-  }
-
-  if (overlayWindow.isVisible()) {
-    overlayWindow.hide();
-  } else {
-    overlayWindow.show();
-    overlayWindow.focus();
-  }
+  cycleOverlayMode();
 }
 
 function updateTrayMenu() {
@@ -910,19 +1242,44 @@ function createWindow() {
     try {
       if (!launchTarget) throw new Error('Caminho ou alvo do jogo não informado.');
 
+      const cleanTitle = cleanGameTitle(title || path.basename(launchTarget, path.extname(launchTarget)));
+      let gameDir = '';
+      try {
+        if (fs.existsSync(launchTarget)) {
+          const stat = fs.statSync(launchTarget);
+          gameDir = stat.isFile() ? path.dirname(launchTarget) : launchTarget;
+        }
+      } catch (_) {}
+
       currentActiveGame = {
-        title: title || path.basename(launchTarget, path.extname(launchTarget)),
+        title: title || cleanTitle,
+        cleanTitle,
         launchTarget,
         launchType,
         platform: platform || 'custom',
         imageUrl: imageUrl || null,
-        startedAt: Date.now()
+        gameDir,
+        startedAt: Date.now(),
+        lastSavedAt: Date.now()
       };
+
+      activeGamePid = null;
+      activeGameHwnd = null;
+      activeGameConsecutiveMissing = 0;
+      activeGameLaunchGraceUntil = Date.now() + 60000; // 60 segundos de tolerância para launchers / splash screens
+      overlayMode = 'compact';
+      overlayUserWantedVisible = true; // Inicia junto com o jogo no modo compacto de FPS
 
       updateTrayMenu();
 
       if (overlayWindow && !overlayWindow.isDestroyed()) {
+        updateOverlayBounds();
+        overlayWindow.webContents.send('overlay:mode-changed', 'compact');
         overlayWindow.webContents.send('overlay:active-game-changed', currentActiveGame);
+        overlayWindow.showInactive();
+        applyOverlayNoActivate();
+      } else {
+        createOverlayWindow();
       }
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('overlay:active-game-changed', currentActiveGame);
@@ -941,16 +1298,13 @@ function createWindow() {
         const cwd = path.dirname(launchTarget);
         const child = spawn(launchTarget, [], {
           cwd,
-          detached: false,
+          detached: true,
           stdio: 'ignore'
         });
 
         activeGameProcess = child;
         activeGamePid = child.pid;
-
-        child.on('exit', () => handleGameClosed());
-        child.on('close', () => handleGameClosed());
-        child.on('error', () => handleGameClosed());
+        child.unref();
 
         startActiveGameWatchdog();
         return { success: true };
@@ -961,16 +1315,13 @@ function createWindow() {
         const cwd = path.dirname(launchTarget);
         const child = spawn('cmd.exe', ['/c', launchTarget], {
           cwd,
-          detached: false,
+          detached: true,
           stdio: 'ignore'
         });
 
         activeGameProcess = child;
         activeGamePid = child.pid;
-
-        child.on('exit', () => handleGameClosed());
-        child.on('close', () => handleGameClosed());
-        child.on('error', () => handleGameClosed());
+        child.unref();
 
         startActiveGameWatchdog();
         return { success: true };
@@ -1222,25 +1573,94 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle('overlay:get-mode', async () => {
+    return overlayMode;
+  });
+
+  ipcMain.on('overlay:set-mode', (_event, mode) => {
+    setOverlayMode(mode);
+  });
+
+  ipcMain.on('overlay:cycle-mode', () => {
+    cycleOverlayMode();
+  });
+
   ipcMain.on('overlay:set-expanded', (_event, isExpanded) => {
-    if (!overlayWindow || overlayWindow.isDestroyed()) return;
-    try {
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth } = primaryDisplay.workAreaSize;
-      const width = 680;
-      const height = isExpanded ? 440 : 56;
-      const x = Math.round((screenWidth - width) / 2);
-      const y = 16;
-      overlayWindow.setBounds({ x, y, width, height });
-    } catch (err) {
-      console.error('Erro ao redimensionar overlay:', err);
+    overlayIsNotesExpanded = Boolean(isExpanded);
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      if (overlayIsNotesExpanded) {
+        try { overlayWindow.setFocusable(true); } catch (_) {}
+      } else {
+        try { overlayWindow.setFocusable(false); } catch (_) {}
+      }
     }
+    updateOverlayBounds();
+    applyOverlayNoActivate();
   });
 
   ipcMain.on('overlay:hide', () => {
+    setOverlayMode('hidden');
+  });
+
+  ipcMain.on('overlay:focus', () => {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.hide();
+      overlayWindow.focus();
     }
+  });
+
+  ipcMain.on('overlay:focus-game', () => {
+    const helperPath = getHelperExePath();
+    if (!helperPath || !fs.existsSync(helperPath)) return;
+    try {
+      const { execFile } = require('child_process');
+      const targetHwnd = activeGameHwnd || 0;
+      const targetPid = activeGamePid || 0;
+      execFile(helperPath, ['--focus-game', String(targetHwnd), String(targetPid)], { timeout: 1500 }, () => {});
+    } catch (_) {}
+  });
+
+  ipcMain.on('overlay:toggle', () => {
+    cycleOverlayMode();
+  });
+
+  // ==========================================
+  // PLAYTIMES IPC (TEMPO DE JOGO DO GAMER'S HUB)
+  // ==========================================
+  ipcMain.handle('hub:get-playtimes', async () => {
+    return loadPlaytimes();
+  });
+
+  ipcMain.handle('hub:get-game-playtime', async (_event, gameTitle) => {
+    if (!gameTitle) return { totalSeconds: 0 };
+    const key = normalizeGameKey(gameTitle);
+    const playtimes = loadPlaytimes();
+    return playtimes[key] || { totalSeconds: 0, title: gameTitle };
+  });
+
+  ipcMain.handle('hub:update-game-playtime', async (_event, { gameTitle, totalSeconds }) => {
+    if (!gameTitle) return { success: false };
+    const key = normalizeGameKey(gameTitle);
+    const playtimes = loadPlaytimes();
+    playtimes[key] = {
+      ...(playtimes[key] || {}),
+      title: gameTitle,
+      totalSeconds: Number(totalSeconds) || 0,
+      lastPlayed: Date.now()
+    };
+    savePlaytimes(playtimes);
+
+    const updatePayload = {
+      gameKey: key,
+      title: gameTitle,
+      totalSeconds: Number(totalSeconds) || 0
+    };
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('hub:playtime-updated', updatePayload);
+    }
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('hub:playtime-updated', updatePayload);
+    }
+    return { success: true };
   });
 
   // ==========================================
@@ -1255,6 +1675,7 @@ function createWindow() {
     saveSettings(appSettings);
     applyStartupSettings(appSettings.openAtLogin, appSettings.startMinimized);
     applyGlobalShortcut(appSettings.globalShortcut, appSettings.overlayShortcut);
+    updateOverlayBounds();
     updateTrayMenu();
     return { success: true, settings: appSettings };
   });

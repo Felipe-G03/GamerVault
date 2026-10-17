@@ -30,7 +30,9 @@ import {
   updatePlatformGameMedia,
   getHiddenHubGames,
   hideHubGame,
-  unhideHubGame
+  unhideHubGame,
+  getHubPlaytimes,
+  normalizeGameKey
 } from '../../services/hubService';
 import HubCard from './HubCard';
 import HubFolderModal from './HubFolderModal';
@@ -43,6 +45,7 @@ import PlatformIcon from '../common/PlatformIcon';
 export default function HubView({ games = [], onAddGame, onUpdateGame, userId }) {
   // Configurações de caminhos de cada plataforma
   const [platformPaths, setPlatformPaths] = useState(getHubConfiguredPaths());
+  const [hubPlaytimes, setHubPlaytimes] = useState({});
 
   // Estados de sanfona (aberta / fechada) por plataforma
   const [collapsedMap, setCollapsedMap] = useState(getHubCollapsedState());
@@ -134,6 +137,30 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
     const totalCached = Object.values(initialGames).reduce((acc, list) => acc + (list?.length || 0), 0);
     if (totalCached === 0 && window.electronAPI?.scanPlatform) {
       handleScanAll();
+    }
+  }, []);
+
+  // Carrega e sincroniza playtimes dos jogos iniciados pelo Hub
+  useEffect(() => {
+    getHubPlaytimes().then(res => {
+      if (res) setHubPlaytimes(res);
+    });
+
+    if (window.electronAPI?.onPlaytimeUpdated) {
+      const unsub = window.electronAPI.onPlaytimeUpdated((payload) => {
+        if (payload?.gameKey && typeof payload.totalSeconds === 'number') {
+          setHubPlaytimes(prev => ({
+            ...prev,
+            [payload.gameKey]: {
+              ...(prev[payload.gameKey] || {}),
+              title: payload.title,
+              totalSeconds: payload.totalSeconds,
+              lastPlayed: Date.now()
+            }
+          }));
+        }
+      });
+      return unsub;
     }
   }, []);
 
@@ -511,12 +538,15 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
               {allUnifiedGames.map((game) => {
                 const normTitle = (game.title || '').trim().toLowerCase();
                 const vaultGame = vaultGamesByTitle[normTitle];
+                const gameKey = normalizeGameKey(game.title);
+                const playtimeSeconds = hubPlaytimes[gameKey]?.totalSeconds || 0;
 
                 return (
                   <HubCard
                     key={game.id}
                     game={game}
                     vaultGame={vaultGame}
+                    playtimeSeconds={playtimeSeconds}
                     onLaunch={handleLaunchGame}
                     onHideGame={handleHideGame}
                     onCustomizeMedia={(g, vg) => {
@@ -625,12 +655,15 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
                         {filteredGames.map((game) => {
                           const normTitle = (game.title || '').trim().toLowerCase();
                           const vaultGame = vaultGamesByTitle[normTitle];
+                          const gameKey = normalizeGameKey(game.title);
+                          const playtimeSeconds = hubPlaytimes[gameKey]?.totalSeconds || 0;
 
                           return (
                             <HubCard
                               key={game.id}
                               game={game}
                               vaultGame={vaultGame}
+                              playtimeSeconds={playtimeSeconds}
                               onLaunch={handleLaunchGame}
                               onHideGame={handleHideGame}
                               onCustomizeMedia={(g, vg) => {
@@ -695,6 +728,7 @@ export default function HubView({ games = [], onAddGame, onUpdateGame, userId })
         <HubFinishModal
           game={finishModalGame.game}
           existingVaultGame={finishModalGame.vaultGame}
+          hubPlaytimeSeconds={hubPlaytimes[normalizeGameKey(finishModalGame.game?.title)]?.totalSeconds || 0}
           onClose={() => setFinishModalGame(null)}
           onConfirm={handleConfirmFinish}
         />

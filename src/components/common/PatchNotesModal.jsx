@@ -10,45 +10,47 @@ import {
   Trophy, 
   CheckCircle2,
   ChevronRight,
-  Layers
+  Layers,
+  Compass,
+  FileText
 } from 'lucide-react';
 
 const HIGHLIGHTS = [
   {
-    id: 'impeccable_design',
-    icon: Sparkles,
+    id: 'overlay_ign_guide',
+    icon: Compass,
+    color: 'from-red-500/20 to-orange-500/10 text-red-400 border-red-500/30',
+    tag: 'GUIA IGN & DETONADOS',
+    tagColor: 'bg-red-500/20 text-red-300 border-red-500/40',
+    title: 'Guia Rápido IGN In-Game 100% Integrado',
+    description: 'Consulte detonados de fases, senhas de cofres, dicas de bosses e mapas diretamente sobre a tela do jogo, sem abrir navegadores externos e sem sair da partida.'
+  },
+  {
+    id: 'overlay_clickthrough_fps',
+    icon: Gamepad2,
     color: 'from-emerald-500/20 to-teal-500/10 text-emerald-400 border-emerald-500/30',
-    tag: 'DESIGN REVOLUTION',
+    tag: 'IN-GAME OVERLAY 2.0',
     tagColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-    title: 'Padrão Impeccable Visual',
-    description: 'Adotamos o Impeccable no design system: contraste aperfeiçoado, dock de navegação flutuante estilo console HUD, ambient lighting duplo e acabamento premium em toda a interface.'
+    title: 'Mini HUD de FPS Click-Through & Ciclo Dinâmico',
+    description: 'Alternância perfeita via Alt+O: Mini FPS no canto da tela 100% transparente e impossível de ser clicado (pass-through total), HUD expandido e modo oculto.'
   },
   {
-    id: 'guild_podium',
-    icon: Crown,
+    id: 'game_notes_nofocus',
+    icon: FileText,
     color: 'from-amber-500/20 to-yellow-500/10 text-amber-400 border-amber-500/30',
-    tag: 'HALL DA FAMA',
+    tag: 'NOTAS DO JOGO',
     tagColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-    title: 'Pódio Visual Top 3 na Guilda',
-    description: 'A aba Guilda agora conta com um pódio olímpico destacando o 1º MVP com coroa dourada, 2º prata e 3º bronze, além de categorias de ranking intuitivas e cartões com a aura de cada membro.'
+    title: 'Bloco de Notas Sem Perda de Foco',
+    description: 'Faça anotações de senhas, coordenadas e builds salvos automaticamente por jogo, com inserção rápida e retorno instantâneo do foco ao jogo pressionando Esc.'
   },
   {
-    id: 'profile_aura',
-    icon: Palette,
-    color: 'from-pink-500/20 to-rose-500/10 text-pink-400 border-pink-500/30',
-    tag: 'PERSONALIZAÇÃO',
-    tagColor: 'bg-pink-500/20 text-pink-300 border-pink-500/40',
-    title: 'Seletor de Cor & Aura de Perfil',
-    description: 'Personalize a cor da sua aura por seletor livre ou paletas gamer rápidas. Sua cor ilumina o modal e os destaques quando seus amigos visualizarem seu perfil na guilda.'
-  },
-  {
-    id: 'qol_polish',
+    id: 'hub_playtime_audio',
     icon: Sliders,
     color: 'from-cyan-500/20 to-blue-500/10 text-cyan-400 border-cyan-500/30',
-    tag: 'QUALIDADE DE VIDA',
+    tag: 'CONTADOR & ÁUDIO',
     tagColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-    title: 'Melhorias de QoL e Fluidez',
-    description: 'Múltiplos refinamentos de usabilidade e performance: cartões de jogos com visual limpo, transições suaves e feed social integrado com identidade visual dos membros.'
+    title: 'Tempo de Jogo Contínuo & Início Silenciado',
+    description: 'O Gamer\'s Hub agora registra e acumula com precisão o tempo jogado de cada título. Adicionada opção de iniciar o aplicativo com a música tema silenciada nas Configurações.'
   }
 ];
 
@@ -57,7 +59,7 @@ export default function PatchNotesModal({ onClose }) {
 
   const handleUnderstand = () => {
     try {
-      localStorage.setItem('gamervault_last_patch_seen', '2.4.2');
+      localStorage.setItem('gamervault_last_patch_seen', '2.4.3');
     } catch (_) {}
     onClose();
   };
@@ -80,7 +82,7 @@ export default function PatchNotesModal({ onClose }) {
                   O QUE HÁ DE NOVO
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">
-                  v2.4.2 • Impeccable & QoL
+                  v2.4.3 • In-Game Overlay 2.0 & Detonados
                 </span>
               </div>
               <h2 className="text-base sm:text-xl font-gamer font-bold text-white tracking-wide">

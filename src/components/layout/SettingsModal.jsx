@@ -13,7 +13,10 @@ import {
   Keyboard,
   RotateCw,
   Rocket,
-  Gamepad2
+  Gamepad2,
+  VolumeX,
+  Volume2,
+  Music
 } from 'lucide-react';
 
 const PRESET_GLOBAL_SHORTCUTS = [
@@ -37,7 +40,9 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
     startMinimized: false,
     minimizeToTray: true,
     globalShortcut: 'Alt+Space',
-    overlayShortcut: 'Alt+O'
+    overlayShortcut: 'Alt+O',
+    overlayFpsPosition: 'top-right',
+    startMuted: false
   });
 
   const [loading, setLoading] = useState(true);
@@ -79,6 +84,8 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
               minimizeToTray: true,
               globalShortcut: 'Alt+Space',
               overlayShortcut: 'Alt+O',
+              overlayFpsPosition: 'top-right',
+              startMuted: false,
               ...res
             });
           }
@@ -92,6 +99,8 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
               minimizeToTray: true,
               globalShortcut: 'Alt+Space',
               overlayShortcut: 'Alt+O',
+              overlayFpsPosition: 'top-right',
+              startMuted: false,
               ...JSON.parse(saved)
             });
           }
@@ -274,6 +283,33 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
                   />
                 </button>
               </div>
+
+              {/* Toggle: Iniciar com a música silenciada */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface/60 border border-border/60 hover:border-accent-bright/40 transition-colors">
+                <div className="space-y-0.5 pr-4">
+                  <div className="text-xs sm:text-sm font-gamer font-semibold text-white flex items-center gap-1.5">
+                    <VolumeX className="w-4 h-4 text-rose-400" />
+                    <span>Iniciar com Música Silenciada (Mudo)</span>
+                  </div>
+                  <div className="text-[11px] text-gray-400 font-sans">
+                    Abre o GamerVault com as músicas de fundo silenciadas automaticamente ao iniciar.
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggle('startMuted')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    settings.startMuted ? 'bg-rose-500' : 'bg-surface-high'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface-low shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      settings.startMuted ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -411,6 +447,46 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
                         }`}
                       >
                         {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Configuração da Posição do Mini HUD de FPS */}
+              <div className="p-3.5 rounded-xl bg-surface/60 border border-purple-500/30 space-y-3">
+                <div className="space-y-0.5">
+                  <div className="text-xs sm:text-sm font-gamer font-semibold text-white flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-emerald-400" />
+                    <span>Posição do Mini HUD (Contador de FPS)</span>
+                  </div>
+                  <div className="text-[11px] text-gray-400 font-sans">
+                    Escolha em qual canto da tela o contador reduzido de FPS deve aparecer durante o jogo.
+                  </div>
+                </div>
+
+                {/* Grid dos 4 cantos da tela */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {[
+                    { id: 'top-left', label: 'Superior Esquerdo' },
+                    { id: 'top-right', label: 'Superior Direito (Padrão)' },
+                    { id: 'bottom-left', label: 'Inferior Esquerdo' },
+                    { id: 'bottom-right', label: 'Inferior Direito' }
+                  ].map((corner) => {
+                    const isSelected = (settings.overlayFpsPosition || 'top-right') === corner.id;
+                    return (
+                      <button
+                        key={corner.id}
+                        type="button"
+                        onClick={() => setSettings((prev) => ({ ...prev, overlayFpsPosition: corner.id }))}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-mono transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-500/15 border-emerald-400 text-emerald-300 font-bold shadow-[0_0_12px_rgba(52,211,153,0.15)]'
+                            : 'bg-surface hover:bg-surface-high border-border text-gray-300'
+                        }`}
+                      >
+                        <span>{corner.label}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
                       </button>
                     );
                   })}

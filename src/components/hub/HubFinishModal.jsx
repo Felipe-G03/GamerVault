@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Trophy, Star, Clock, Calendar, Check, Flame } from 'lucide-react';
 
-export default function HubFinishModal({ game, existingVaultGame, onClose, onConfirm }) {
+export default function HubFinishModal({ game, existingVaultGame, hubPlaytimeSeconds = 0, onClose, onConfirm }) {
+  const hubHours = hubPlaytimeSeconds > 0 ? (hubPlaytimeSeconds / 3600 >= 1 ? (hubPlaytimeSeconds / 3600).toFixed(1) : '0.5') : '';
+  const initialPlaytime = existingVaultGame?.playtime || hubHours || '';
   const [rating, setRating] = useState(existingVaultGame?.rating || 8.5);
-  const [playtime, setPlaytime] = useState(existingVaultGame?.playtime || '');
+  const [playtime, setPlaytime] = useState(initialPlaytime);
   const [dateFinished, setDateFinished] = useState(
     existingVaultGame?.dateFinished || new Date().toISOString().split('T')[0]
   );
@@ -140,6 +142,11 @@ export default function HubFinishModal({ game, existingVaultGame, onClose, onCon
                 onChange={(e) => setPlaytime(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-surface border border-border text-sm text-white focus:outline-none focus:border-accent-bright"
               />
+              {hubHours && !existingVaultGame?.playtime && (
+                <span className="text-[10px] font-mono text-emerald-400 mt-1 block">
+                  ⏱️ Gravado no Hub: {hubHours}h
+                </span>
+              )}
             </div>
             <div>
               <label className="block text-xs font-mono text-gray-300 uppercase tracking-wider mb-1 flex items-center gap-1">

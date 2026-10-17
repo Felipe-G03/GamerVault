@@ -48,8 +48,31 @@ export default function BgmPlayer() {
   });
 
   const [isMuted, setIsMuted] = useState(() => {
+    try {
+      const savedSettings = localStorage.getItem('gamervault_settings');
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        if (parsed?.startMuted) return true;
+      }
+    } catch (_) {}
     return localStorage.getItem('gamervault_bgm_muted') === 'true';
   });
+
+  // Verifica preferência de iniciar mudo (startMuted) do Electron ou LocalStorage
+  useEffect(() => {
+    async function checkStartMuted() {
+      try {
+        if (window.electronAPI?.getSettings) {
+          const s = await window.electronAPI.getSettings();
+          if (s?.startMuted) {
+            setIsMuted(true);
+            if (audioRef.current) audioRef.current.volume = 0;
+          }
+        }
+      } catch (_) {}
+    }
+    checkStartMuted();
+  }, []);
 
   const [showToast, setShowToast] = useState(false);
   const [toastTrack, setToastTrack] = useState(null);

@@ -441,4 +441,76 @@ export function getAllHubGames() {
   return all;
 }
 
+/**
+ * Normaliza o título ou jogo em uma chave consistente de busca
+ */
+export function normalizeGameKey(titleOrGame) {
+  const title = typeof titleOrGame === 'object' ? (titleOrGame.title || titleOrGame.id || '') : String(titleOrGame || '');
+  return title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '') || 'game';
+}
+
+/**
+ * Formata segundos jogados em formato conciso de exibição (ex: 12.5h ou 45m)
+ */
+export function formatPlaytime(totalSeconds) {
+  const s = Number(totalSeconds) || 0;
+  if (s <= 0) return null;
+  if (s < 3600) {
+    const mins = Math.max(1, Math.floor(s / 60));
+    return `${mins}m`;
+  }
+  const hours = s / 3600;
+  if (hours % 1 === 0) {
+    return `${hours.toFixed(0)}h`;
+  }
+  return `${hours.toFixed(1)}h`;
+}
+
+/**
+ * Formata segundos jogados em formato detalhado (ex: 12h 30min)
+ */
+export function formatPlaytimeDetailed(totalSeconds) {
+  const s = Number(totalSeconds) || 0;
+  if (s <= 0) return '0 minutos';
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  if (hrs > 0 && mins > 0) {
+    return `${hrs}h ${mins}min`;
+  }
+  if (hrs > 0) {
+    return `${hrs} hora${hrs > 1 ? 's' : ''}`;
+  }
+  return `${mins} minuto${mins > 1 ? 's' : ''}`;
+}
+
+const LOCAL_PLAYTIMES_KEY = 'gamervault_hub_playtimes';
+
+/**
+ * Carrega todos os playtimes registrados pelo Hub (via Electron ou localStorage)
+ */
+export async function getHubPlaytimes() {
+  if (typeof window !== 'undefined' && window.electronAPI?.getPlaytimes) {
+    try {
+      const data = await window.electronAPI.getPlaytimes();
+      if (data && typeof data === 'object') {
+        localStorage.setItem(LOCAL_PLAYTIMES_KEY, JSON.stringify(data));
+        return data;
+      }
+    } catch (_) {}
+  }
+  try {
+    const raw = localStorage.getItem(LOCAL_PLAYTIMES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+
 

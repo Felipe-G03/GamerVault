@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Play, Loader2, Palette, EyeOff } from 'lucide-react';
+import { Play, Loader2, Palette, EyeOff, Clock } from 'lucide-react';
 import PlatformIcon from '../common/PlatformIcon';
 
 export default function HubCard({
   game,
   vaultGame,
+  playtimeSeconds = 0,
   onLaunch,
   onCardClick,
   onCustomizeMedia,
@@ -43,6 +44,27 @@ export default function HubCard({
       default: return platform?.toUpperCase() || 'PC';
     }
   };
+
+  // Tempo de jogo no Hub ou no Vault
+  let effectivePlaytimeSeconds = Number(playtimeSeconds) || 0;
+  if (!effectivePlaytimeSeconds && vaultGame?.playtime) {
+    const vaultHours = parseFloat(String(vaultGame.playtime).replace(/h$/i, '').trim());
+    if (!isNaN(vaultHours) && vaultHours > 0) {
+      effectivePlaytimeSeconds = Math.round(vaultHours * 3600);
+    }
+  }
+
+  const formatCardPlaytime = (seconds) => {
+    if (!seconds || seconds <= 0) return null;
+    if (seconds < 3600) {
+      const m = Math.max(1, Math.floor(seconds / 60));
+      return `${m}m`;
+    }
+    const h = seconds / 3600;
+    return h % 1 === 0 ? `${h.toFixed(0)}h` : `${h.toFixed(1)}h`;
+  };
+
+  const formattedPlaytime = formatCardPlaytime(effectivePlaytimeSeconds);
 
   // Avaliação pessoal do usuário no Vault (apenas se o usuário realmente avaliou o jogo)
   const userVaultRating = vaultGame?.rating && Number(vaultGame.rating) > 0 ? Number(vaultGame.rating) : null;
@@ -88,8 +110,8 @@ export default function HubCard({
 
       {/* BADGES NO TOPO */}
       <div className="absolute top-2.5 inset-x-2.5 flex items-center justify-between z-10 pointer-events-none">
-        {/* Lado Esquerdo: Tag de Status do Vault (Zerado / Dropado) */}
-        <div>
+        {/* Lado Esquerdo: Tag de Status do Vault (Zerado / Dropado) e Playtime */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           {isFinished && (
             <span className="px-2 py-0.5 rounded bg-emerald-500 text-black text-[9px] font-gamer font-extrabold uppercase tracking-wider shadow-sm">
               Zerado
@@ -98,6 +120,15 @@ export default function HubCard({
           {isDropped && (
             <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[9px] font-gamer font-extrabold uppercase tracking-wider shadow-sm">
               Dropado
+            </span>
+          )}
+          {formattedPlaytime && (
+            <span
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-md border border-emerald-500/35 text-emerald-400 text-[9px] font-mono font-bold tracking-tight shadow-sm"
+              title={`Tempo total de jogo: ${formattedPlaytime}`}
+            >
+              <Clock className="w-2.5 h-2.5 text-emerald-400" />
+              <span>{formattedPlaytime}</span>
             </span>
           )}
         </div>
@@ -113,6 +144,13 @@ export default function HubCard({
 
       {/* OVERLAY DE AÇÕES NO HOVER (Estilo Big Picture) */}
       <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-250 bg-black/55 backdrop-blur-[3px] z-20 p-4">
+        {formattedPlaytime && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/80 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono mb-2 shadow-sm">
+            <Clock className="w-3 h-3 text-emerald-400" />
+            <span>{formattedPlaytime} jogadas</span>
+          </div>
+        )}
+
         {/* Botão Principal: Iniciar / Jogar */}
         <button
           onClick={handleLaunchClick}
@@ -172,9 +210,15 @@ export default function HubCard({
             >
               {game.title}
             </h3>
-            <p className="text-[10px] text-gray-300/80 truncate mt-0.5 font-sans">
-              {game.genres || 'Jogo de PC'}
-            </p>
+            <div className="flex items-center gap-1 text-[10px] text-gray-300/80 truncate mt-0.5 font-sans">
+              {formattedPlaytime && (
+                <>
+                  <span className="text-emerald-400 font-mono font-bold shrink-0">{formattedPlaytime}</span>
+                  <span className="text-gray-500 shrink-0">•</span>
+                </>
+              )}
+              <span className="truncate">{game.genres || 'Jogo de PC'}</span>
+            </div>
           </div>
 
           {/* Badge Circular Translúcida (Exibida exclusivamente quando o usuário avaliou o jogo no Vault) */}
