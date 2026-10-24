@@ -5,6 +5,7 @@
  */
 
 let activeProcessCapture = null;
+let captureGeneration = 0;
 
 /**
  * Cria uma faixa de áudio (MediaStreamTrack) capturando exclusivamente o som do processo alvo.
@@ -22,6 +23,7 @@ export async function createProcessAudioTrack(sourceOrPid) {
 
   // Encerra qualquer captura prévia
   stopProcessAudioTrack();
+  const myGeneration = ++captureGeneration;
 
   try {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -90,13 +92,27 @@ export async function createProcessAudioTrack(sourceOrPid) {
 
     // Inicia a captura nativa no processo
     const res = await window.electronAPI.startProcessAudio(params);
-    if (!res?.success) {
+
+    let released = false;
+    const releaseGraph = () => {
+      if (released) return;
+      released = true;
       removeListener?.();
-      try {
-        scriptNode.disconnect();
-        destNode.disconnect();
-        audioCtx.close();
-      } catch (_) {}
+      scriptNode.onaudioprocess = null;
+      try { scriptNode.disconnect(); } catch (_) {}
+      try { destNode.stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      try { destNode.disconnect(); } catch (_) {}
+      try { audioCtx.close(); } catch (_) {}
+    };
+
+    // Outra captura foi iniciada (ou esta foi cancelada) enquanto aguardávamos o Electron
+    if (myGeneration !== captureGeneration) {
+      releaseGraph();
+      return null;
+    }
+
+    if (!res?.success) {
+      releaseGraph();
       return null;
     }
 
@@ -105,13 +121,8 @@ export async function createProcessAudioTrack(sourceOrPid) {
     activeProcessCapture = {
       track,
       stop: () => {
-        removeListener?.();
+        releaseGraph();
         window.electronAPI.stopProcessAudio().catch(console.warn);
-        try {
-          scriptNode.disconnect();
-          destNode.disconnect();
-          audioCtx.close();
-        } catch (_) {}
         activeProcessCapture = null;
       }
     };
@@ -127,10 +138,15 @@ export async function createProcessAudioTrack(sourceOrPid) {
  * Encerra qualquer captura ativa de áudio de processo
  */
 export function stopProcessAudioTrack() {
+  // Invalida capturas que ainda estejam sendo inicializadas
+  captureGeneration++;
   if (activeProcessCapture) {
     try {
       activeProcessCapture.stop();
     } catch (_) {}
     activeProcessCapture = null;
+  } else if (window.electronAPI?.stopProcessAudio) {
+    // Garante que o loopback nativo não fique rodando sem consumidor
+    window.electronAPI.stopProcessAudio().catch(() => {});
   }
 }

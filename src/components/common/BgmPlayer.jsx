@@ -58,20 +58,54 @@ export default function BgmPlayer() {
     return localStorage.getItem('gamervault_bgm_muted') === 'true';
   });
 
+  const isMutedRef = useRef(isMuted);
+  const volumeRef = useRef(volume);
+
+  // Mantém refs sempre sincronizadas com os valores mais recentes
+  isMutedRef.current = isMuted;
+  volumeRef.current = volume;
+
+  const applyAudioVolume = () => {
+    if (audioRef.current) {
+      audioRef.current.muted = isMutedRef.current;
+      audioRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
+    }
+  };
+
   // Verifica preferência de iniciar mudo (startMuted) do Electron ou LocalStorage
   useEffect(() => {
     async function checkStartMuted() {
       try {
         if (window.electronAPI?.getSettings) {
           const s = await window.electronAPI.getSettings();
-          if (s?.startMuted) {
-            setIsMuted(true);
-            if (audioRef.current) audioRef.current.volume = 0;
+          if (s) {
+            try {
+              localStorage.setItem('gamervault_settings', JSON.stringify(s));
+            } catch (_) {}
+            if (s.startMuted) {
+              setIsMuted(true);
+              isMutedRef.current = true;
+              applyAudioVolume();
+            }
           }
         }
       } catch (_) {}
     }
     checkStartMuted();
+
+    const handleSettingsUpdated = (e) => {
+      const updated = e.detail;
+      if (updated?.startMuted !== undefined) {
+        if (updated.startMuted) {
+          setIsMuted(true);
+          isMutedRef.current = true;
+          applyAudioVolume();
+        }
+      }
+    };
+
+    window.addEventListener('gamervault:settings-updated', handleSettingsUpdated);
+    return () => window.removeEventListener('gamervault:settings-updated', handleSettingsUpdated);
   }, []);
 
   const [showToast, setShowToast] = useState(false);
@@ -96,11 +130,11 @@ export default function BgmPlayer() {
 
   const currentTrack = activeTrack || playlist[currentTrackIndex] || playlist[0] || library.allTracks[0] || null;
 
-  // Configura volume no elemento de áudio
+  // Configura volume e estado de mudo no elemento de áudio
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
-    }
+    isMutedRef.current = isMuted;
+    volumeRef.current = volume;
+    applyAudioVolume();
   }, [volume, isMuted]);
 
   // Função centralizada para tocar qualquer faixa por índice sem conflitos de re-render
@@ -119,7 +153,8 @@ export default function BgmPlayer() {
     if (audioRef.current.src !== url) {
       audioRef.current.src = url;
     }
-    audioRef.current.volume = isMuted ? 0 : volume;
+    audioRef.current.muted = isMutedRef.current;
+    audioRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
 
     try {
       await audioRef.current.play();
@@ -177,7 +212,8 @@ export default function BgmPlayer() {
       if (!url || !audioRef.current || userManuallyPausedRef.current) return;
 
       audioRef.current.src = url;
-      audioRef.current.volume = isMuted ? 0 : volume;
+      audioRef.current.muted = isMutedRef.current;
+      audioRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
 
       audioRef.current
         .play()
@@ -190,14 +226,18 @@ export default function BgmPlayer() {
           const onFirstInteraction = () => {
             if (userManuallyPausedRef.current || hasStartedRef.current) return;
             setActiveTrack(firstTrack);
-            audioRef.current
-              ?.play()
-              .then(() => {
-                hasStartedRef.current = true;
-                setIsPlaying(true);
-                triggerNowPlayingToast(firstTrack);
-              })
-              .catch(() => {});
+            if (audioRef.current) {
+              audioRef.current.muted = isMutedRef.current;
+              audioRef.current.volume = isMutedRef.current ? 0 : volumeRef.current;
+              audioRef.current
+                ?.play()
+                .then(() => {
+                  hasStartedRef.current = true;
+                  setIsPlaying(true);
+                  triggerNowPlayingToast(firstTrack);
+                })
+                .catch(() => {});
+            }
           };
 
           window.addEventListener('click', onFirstInteraction, { once: true });
@@ -368,16 +408,30 @@ export default function BgmPlayer() {
   const handleVolumeChange = (e) => {
     const newVol = parseFloat(e.target.value);
     setVolume(newVol);
+    volumeRef.current = newVol;
     localStorage.setItem('gamervault_bgm_volume', String(newVol));
     if (isMuted && newVol > 0) {
       setIsMuted(false);
+      isMutedRef.current = false;
+      if (audioRef.current) {
+        audioRef.current.muted = false;
+        audioRef.current.volume = newVol;
+      }
       localStorage.setItem('gamervault_bgm_muted', 'false');
+    } else if (audioRef.current) {
+      audioRef.current.muted = isMuted;
+      audioRef.current.volume = isMuted ? 0 : newVol;
     }
   };
 
   const toggleMute = () => {
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
+    isMutedRef.current = nextMuted;
+    if (audioRef.current) {
+      audioRef.current.muted = nextMuted;
+      audioRef.current.volume = nextMuted ? 0 : volumeRef.current;
+    }
     localStorage.setItem('gamervault_bgm_muted', String(nextMuted));
   };
 
@@ -437,6 +491,7 @@ export default function BgmPlayer() {
       {/* Elemento de áudio invisível */}
       <audio
         ref={audioRef}
+        muted={isMuted}
         onEnded={nextTrack}
         onError={() => setIsPlaying(false)}
         preload="auto"

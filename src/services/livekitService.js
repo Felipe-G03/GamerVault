@@ -123,6 +123,7 @@ export async function startLiveKitBroadcast({
   let currentAudioTrack = stream.getAudioTracks()?.[0];
   let videoPub = null;
   let audioPub = null;
+  let isStopped = false;
 
   const encodingConfig = {
     maxBitrate: bitrateBps,
@@ -198,6 +199,7 @@ export async function startLiveKitBroadcast({
 
   // Troca de janela em tempo real via SFU
   async function updateStream(newStream) {
+    if (isStopped) return;
     const newVideo = newStream.getVideoTracks()?.[0];
     if (newVideo && newVideo !== currentVideoTrack) {
       try {
@@ -240,10 +242,25 @@ export async function startLiveKitBroadcast({
 
   // Encerra a transmissão no LiveKit e deleta a sala na nuvem
   async function stop() {
+    if (isStopped) return;
+    isStopped = true;
     unsubFirestoreViewers?.();
+    unsubFirestoreViewers = null;
     try {
-      await room.disconnect();
+      room.off(RoomEvent.ParticipantConnected, updateViewerCount);
+      room.off(RoomEvent.ParticipantDisconnected, updateViewerCount);
     } catch (_) {}
+    try {
+      // stopTracks=true: garante que nenhuma track publicada continue viva/encodando
+      await room.disconnect(true);
+    } catch (_) {}
+    try {
+      room.removeAllListeners();
+    } catch (_) {}
+    currentVideoTrack = null;
+    currentAudioTrack = null;
+    videoPub = null;
+    audioPub = null;
 
     try {
       if (window.electronAPI?.deleteLiveKitRoom && roomName) {
@@ -280,18 +297,20 @@ export function connectLiveKitViewer({
   let isCleanedUp = false;
 
   async function connectWithToken(url, token) {
-    if (isCleanedUp) return;
+    if (isCleanedUp || room) return;
+    const lkRoom = new Room({
+      adaptiveStream: false,
+      dynacast: false
+    });
+    room = lkRoom;
     try {
-      room = new Room({
-        adaptiveStream: false,
-        dynacast: false
-      });
-
-      room.on(RoomEvent.ConnectionStateChanged, (state) => {
+      lkRoom.on(RoomEvent.ConnectionStateChanged, (state) => {
+        if (isCleanedUp) return;
         onConnectionStateChange?.(state);
       });
 
-      room.on(RoomEvent.TrackSubscribed, (track) => {
+      lkRoom.on(RoomEvent.TrackSubscribed, (track) => {
+        if (isCleanedUp) return;
         if (track.mediaStreamTrack) {
           // Remove tracks anteriores do mesmo tipo se houver
           const existing = mediaStream.getTracks().filter(t => t.kind === track.mediaStreamTrack.kind);
@@ -302,14 +321,25 @@ export function connectLiveKitViewer({
         }
       });
 
-      await room.connect(url, token);
+      await lkRoom.connect(url, token);
+
+      // O espectador pode ter saído enquanto a conexão era estabelecida:
+      // sem isso a sala ficaria conectada recebendo/decodificando vídeo em segundo plano.
+      if (isCleanedUp) {
+        try { await lkRoom.disconnect(); } catch (_) {}
+        try { lkRoom.removeAllListeners(); } catch (_) {}
+        return;
+      }
+
       onConnectionStateChange?.('connected');
 
       // Se houver tracks que já estavam publicadas
-      room.remoteParticipants.forEach((participant) => {
+      lkRoom.remoteParticipants.forEach((participant) => {
         participant.trackPublications.forEach((pub) => {
-          if (pub.isSubscribed && pub.track?.mediaStreamTrack) {
-            mediaStream.addTrack(pub.track.mediaStreamTrack);
+          const mst = pub.track?.mediaStreamTrack;
+          if (pub.isSubscribed && mst && !mediaStream.getTracks().includes(mst)) {
+            mediaStream.getTracks().filter(t => t.kind === mst.kind).forEach(t => mediaStream.removeTrack(t));
+            mediaStream.addTrack(mst);
           }
         });
       });
@@ -318,6 +348,10 @@ export function connectLiveKitViewer({
         onRemoteStream?.(mediaStream);
       }
     } catch (err) {
+      try { await lkRoom.disconnect(); } catch (_) {}
+      try { lkRoom.removeAllListeners(); } catch (_) {}
+      if (room === lkRoom) room = null;
+      if (isCleanedUp) return;
       console.error('Falha ao conectar espectador no LiveKit:', err);
       onConnectionStateChange?.('failed');
     }
@@ -349,7 +383,7 @@ export function connectLiveKitViewer({
   }
 
   function startFirestoreHandshake() {
-    if (!db || !castId) return;
+    if (!db || !castId || isCleanedUp) return;
     const viewerDocRef = doc(db, 'vaultcasts', castId, 'viewers', viewerId);
 
     setDoc(viewerDocRef, {
@@ -359,7 +393,7 @@ export function connectLiveKitViewer({
     }).catch(console.warn);
 
     unsubDoc = onSnapshot(viewerDocRef, (snap) => {
-      if (!snap.exists()) return;
+      if (!snap.exists() || isCleanedUp) return;
       const data = snap.data();
       if (data.livekitToken && data.livekitUrl && !room) {
         connectWithToken(data.livekitUrl, data.livekitToken);
@@ -368,15 +402,26 @@ export function connectLiveKitViewer({
   }
 
   function disconnect() {
+    if (isCleanedUp) return;
     isCleanedUp = true;
     unsubDoc?.();
+    unsubDoc = null;
     if (db && castId) {
       const viewerDocRef = doc(db, 'vaultcasts', castId, 'viewers', viewerId);
       deleteDoc(viewerDocRef).catch(() => {});
     }
-    try {
-      room?.disconnect();
-    } catch (_) {}
+    const roomToClose = room;
+    room = null;
+    if (roomToClose) {
+      Promise.resolve()
+        .then(() => roomToClose.disconnect())
+        .catch(() => {})
+        .finally(() => {
+          try { roomToClose.removeAllListeners(); } catch (_) {}
+        });
+    }
+    // Solta as referências das tracks remotas para o GC liberar buffers de decodificação
+    mediaStream.getTracks().forEach((t) => mediaStream.removeTrack(t));
   }
 
   return { disconnect };

@@ -88,6 +88,9 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
               startMuted: false,
               ...res
             });
+            try {
+              localStorage.setItem('gamervault_settings', JSON.stringify(res));
+            } catch (_) {}
           }
         } else {
           // Fallback para ambiente web
@@ -158,11 +161,21 @@ export default function SettingsModal({ onClose, onCheckUpdate, updateInfo }) {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Salva imediatamente no localStorage para persistência síncrona no boot
+      try {
+        localStorage.setItem('gamervault_settings', JSON.stringify(settings));
+        if (settings.startMuted) {
+          localStorage.setItem('gamervault_bgm_muted', 'true');
+        }
+      } catch (_) {}
+
       if (window.electronAPI?.saveSettings) {
         await window.electronAPI.saveSettings(settings);
-      } else {
-        localStorage.setItem('gamervault_settings', JSON.stringify(settings));
       }
+
+      // Notifica o BgmPlayer imediatamente sobre a nova configuração
+      window.dispatchEvent(new CustomEvent('gamervault:settings-updated', { detail: settings }));
+
       setSavedSuccess(true);
       setTimeout(() => {
         setSavedSuccess(false);

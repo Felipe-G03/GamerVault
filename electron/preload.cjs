@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // VaultCast API & Deep Linking
   getVaultCastSources: () => ipcRenderer.invoke('vaultcast:get-sources'),
+  listVaultCastSourceIds: () => ipcRenderer.invoke('vaultcast:list-source-ids'),
   startProcessAudio: (params) => ipcRenderer.invoke('vaultcast:start-process-audio', typeof params === 'object' ? params : { pid: params }),
   stopProcessAudio: () => ipcRenderer.invoke('vaultcast:stop-process-audio'),
   onProcessAudioChunk: (callback) => {

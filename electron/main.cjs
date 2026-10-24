@@ -609,7 +609,12 @@ function startActiveGameWatchdog() {
     // 3. Fallback adicional via desktopCapturer caso o helper ainda não tenha capturado
     if (!isPidAlive && !activeGamePid && checkCount > 3) {
       try {
-        const sources = await desktopCapturer.getSources({ types: ['window'] });
+        // thumbnailSize 0x0: evita gerar bitmaps a cada 2.5s (vazamento de memória conhecido do desktopCapturer)
+        const sources = await desktopCapturer.getSources({
+          types: ['window'],
+          thumbnailSize: { width: 0, height: 0 },
+          fetchWindowIcons: false
+        });
         const gameTitleLower = gameTitle.toLowerCase();
         const hasWindow = sources.some(s => {
           const nameLower = (s.name || '').toLowerCase();
@@ -1401,20 +1406,38 @@ function createWindow() {
     try {
       const sources = await desktopCapturer.getSources({
         types: ['window', 'screen'],
-        thumbnailSize: { width: 640, height: 360 },
+        thumbnailSize: { width: 480, height: 270 },
         fetchWindowIcons: true
       });
 
+      // JPEG é ~10x menor que PNG em base64: reduz o tráfego IPC e a memória retida no renderer
       return sources.map(source => ({
         id: source.id,
         name: source.name,
-        thumbnail: source.thumbnail.toDataURL(),
-        appIcon: source.appIcon ? source.appIcon.toDataURL() : null,
+        thumbnail: source.thumbnail && !source.thumbnail.isEmpty()
+          ? `data:image/jpeg;base64,${source.thumbnail.toJPEG(70).toString('base64')}`
+          : null,
+        appIcon: source.appIcon && !source.appIcon.isEmpty() ? source.appIcon.toDataURL() : null,
         isScreen: source.id.startsWith('screen:')
       }));
     } catch (err) {
       console.error('Erro ao capturar fontes de tela/janela para o VaultCast:', err);
       return [];
+    }
+  });
+
+  // Listagem leve (sem thumbnails/ícones) usada pelo watchdog da live a cada poucos segundos
+  ipcMain.handle('vaultcast:list-source-ids', async () => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['window', 'screen'],
+        thumbnailSize: { width: 0, height: 0 },
+        fetchWindowIcons: false
+      });
+      return sources.map(source => source.id);
+    } catch (err) {
+      console.warn('Erro ao listar IDs de fontes do VaultCast:', err);
+      return null;
     }
   });
 
@@ -1441,8 +1464,10 @@ function createWindow() {
       activeLoopbackCapture = capture;
 
       capture.start(targetPid, true, (chunk) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
           mainWindow.webContents.send('vaultcast:process-audio-chunk', chunk);
+        } else {
+          stopActiveLoopbackCapture();
         }
       });
 
@@ -1453,12 +1478,24 @@ function createWindow() {
     }
   });
 
+  function stopActiveLoopbackCapture() {
+    if (!activeLoopbackCapture) return;
+    const capture = activeLoopbackCapture;
+    activeLoopbackCapture = null;
+    try { capture.stop(); } catch (_) {}
+  }
+
+  // Garante que a captura nativa WASAPI morra junto com o renderer (crash, reload ou fechamento)
+  mainWindow.webContents.on('render-process-gone', stopActiveLoopbackCapture);
+  mainWindow.webContents.on('destroyed', stopActiveLoopbackCapture);
+  mainWindow.webContents.on('did-start-navigation', (_e, _url, isInPlace, isMainFrame) => {
+    if (isMainFrame && !isInPlace) stopActiveLoopbackCapture();
+  });
+  app.once('will-quit', stopActiveLoopbackCapture);
+
   ipcMain.handle('vaultcast:stop-process-audio', async () => {
     try {
-      if (activeLoopbackCapture) {
-        activeLoopbackCapture.stop();
-        activeLoopbackCapture = null;
-      }
+      stopActiveLoopbackCapture();
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };

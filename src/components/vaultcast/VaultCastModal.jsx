@@ -141,6 +141,22 @@ export default function VaultCastModal({
   const [remoteStream, setRemoteStream] = useState(null);
   const [viewerConnectionState, setViewerConnectionState] = useState('idle');
 
+  // Refs sempre atualizadas: evitam closures obsoletas em onended/watchdog/listeners
+  const castIdRef = useRef(null);
+  const isStoppingRef = useRef(false);
+  useEffect(() => {
+    castIdRef.current = castId;
+  }, [castId]);
+
+  // Libera o elemento <video> do espectador (senão o decoder/buffers continuam referenciados)
+  const releaseViewerVideo = () => {
+    const el = viewerVideoRef.current;
+    if (el) {
+      try { el.pause(); } catch (_) {}
+      el.srcObject = null;
+    }
+  };
+
   // Lado do Espectador: Conecta via WebRTC P2P ou LiveKit SFU à transmissão do amigo selecionado
   useEffect(() => {
     if (!watchingCast) {
@@ -148,6 +164,7 @@ export default function VaultCastModal({
         viewerControllerRef.current.disconnect?.();
         viewerControllerRef.current = null;
       }
+      releaseViewerVideo();
       setRemoteStream(null);
       setViewerConnectionState('idle');
       return;
@@ -186,10 +203,11 @@ export default function VaultCastModal({
     return () => {
       controller?.disconnect?.();
       viewerControllerRef.current = null;
+      releaseViewerVideo();
       setRemoteStream(null);
       setViewerConnectionState('idle');
     };
-  }, [watchingCast, user]);
+  }, [watchingCast?.id, watchingCast?.engine, user?.uid]);
 
   // Carrega fontes de telas/janelas do Electron
   const loadSources = async () => {
@@ -219,6 +237,11 @@ export default function VaultCastModal({
   useEffect(() => {
     const unsub = listenToActiveCasts((casts) => {
       setGuildCasts(casts);
+      // Se a live que estamos assistindo terminou, derruba a conexão do espectador
+      setWatchingCast((current) => {
+        if (current && !casts.some(c => c.id === current.id)) return null;
+        return current;
+      });
       if (initialRoomId) {
         const found = casts.find(c => c.id === initialRoomId);
         if (found) {
@@ -333,6 +356,8 @@ export default function VaultCastModal({
       }
 
       const newCastId = `cast_${user?.uid || 'guest'}_${Date.now()}`;
+      castIdRef.current = newCastId;
+      isStoppingRef.current = false;
       setCastId(newCastId);
       setIsBroadcasting(true);
       setBroadcastStartTime(Date.now());
@@ -413,6 +438,10 @@ export default function VaultCastModal({
       } catch (_) {}
     } catch (err) {
       console.error('Falha ao iniciar transmissão:', err);
+      // Se a captura de vídeo falhou, o loopback de áudio já iniciado ficaria rodando para sempre
+      if (!streamRef.current) {
+        stopProcessAudioTrack();
+      }
       alert('Não foi possível capturar esta janela. Verifique se o jogo/janela não está minimizado.');
     } finally {
       setIsStartingBroadcast(false);
@@ -539,25 +568,50 @@ export default function VaultCastModal({
 
   // Encerra transmissão local
   const handleStopBroadcast = async () => {
+    if (isStoppingRef.current) return;
+    isStoppingRef.current = true;
+
     stopProcessAudioTrack();
 
     if (broadcasterControllerRef.current) {
-      broadcasterControllerRef.current.stop();
+      const controller = broadcasterControllerRef.current;
       broadcasterControllerRef.current = null;
+      // Não aguarda: o stop do LiveKit inclui uma chamada de rede para deletar a sala,
+      // e as tracks de captura devem ser encerradas imediatamente logo abaixo.
+      Promise.resolve()
+        .then(() => controller.stop())
+        .catch((stopErr) => console.warn('Erro ao encerrar controlador de transmissão:', stopErr));
     }
     setViewerCount(0);
     setActiveEngine('p2p');
 
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.onended = null;
+        track.stop();
+      });
       streamRef.current = null;
     }
     if (localVideoRef.current) {
+      try { localVideoRef.current.pause(); } catch (_) {}
       localVideoRef.current.srcObject = null;
     }
 
-    if (castId) {
-      await endCastSession(castId);
+    // Solta referências globais usadas pela janela destacada e fecha o popout do transmissor
+    if (window.__VAULTCAST_DATA__?.mode === 'broadcaster') {
+      if (detachedWindowRef.current && !detachedWindowRef.current.closed) {
+        try { detachedWindowRef.current.close(); } catch (_) {}
+      }
+      detachedWindowRef.current = null;
+      window.__VAULTCAST_STREAM__ = null;
+      window.__VAULTCAST_DATA__ = null;
+      setIsDetached(false);
+    }
+
+    const endingCastId = castIdRef.current;
+    castIdRef.current = null;
+    if (endingCastId) {
+      await endCastSession(endingCastId);
     }
 
     setIsBroadcasting(false);
@@ -583,7 +637,38 @@ export default function VaultCastModal({
       });
       bc.close();
     } catch (_) {}
+    isStoppingRef.current = false;
   };
+
+  // Desmontagem do modal: garante que nenhuma captura, PeerConnection, sala LiveKit
+  // ou loopback de áudio continue vivo sem UI para encerrá-lo
+  useEffect(() => {
+    return () => {
+      try { stopProcessAudioTrack(); } catch (_) {}
+      const controller = broadcasterControllerRef.current;
+      broadcasterControllerRef.current = null;
+      try { controller?.stop?.(); } catch (_) {}
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => {
+          t.onended = null;
+          try { t.stop(); } catch (_) {}
+        });
+        streamRef.current = null;
+      }
+      if (castIdRef.current) {
+        endCastSession(castIdRef.current).catch(() => {});
+        castIdRef.current = null;
+      }
+      try { viewerControllerRef.current?.disconnect?.(); } catch (_) {}
+      viewerControllerRef.current = null;
+      if (detachedWindowRef.current && !detachedWindowRef.current.closed) {
+        try { detachedWindowRef.current.close(); } catch (_) {}
+      }
+      detachedWindowRef.current = null;
+      window.__VAULTCAST_STREAM__ = null;
+      window.__VAULTCAST_DATA__ = null;
+    };
+  }, []);
 
   // Escuta comandos de encerramento remoto (Tray, Overlay ou Fechamento do Jogo)
   useEffect(() => {
@@ -785,21 +870,24 @@ export default function VaultCastModal({
 
     const interval = setInterval(async () => {
       try {
-        if (window.electronAPI?.getVaultCastSources) {
-          const sources = await window.electronAPI.getVaultCastSources();
-          const exists = sources.some(s => s.id === targetSourceId);
-          if (!exists) {
-            console.warn('[VaultCast Watchdog] Janela do jogo fechada. Encerrando transmissão...');
-            handleStopBroadcast();
-          }
+        // Usa a listagem leve (sem thumbnails): getSources com miniaturas a cada 3s
+        // acumulava centenas de MB/GB de bitmaps e strings base64 ao longo da live.
+        let ids = null;
+        if (window.electronAPI?.listVaultCastSourceIds) {
+          ids = await window.electronAPI.listVaultCastSourceIds();
+        }
+        if (!Array.isArray(ids)) return;
+        if (!ids.includes(targetSourceId)) {
+          console.warn('[VaultCast Watchdog] Janela do jogo fechada. Encerrando transmissão...');
+          handleStopBroadcast();
         }
       } catch (err) {
         console.warn('[VaultCast Watchdog] Erro ao verificar fontes:', err);
       }
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [isBroadcasting, selectedSource]);
+  }, [isBroadcasting, selectedSource?.id, selectedSource?.isScreen]);
 
   // Listener para encerramento forçado vindo da bandeja (Tray) ou atalho global
   useEffect(() => {

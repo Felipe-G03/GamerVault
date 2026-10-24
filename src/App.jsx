@@ -533,7 +533,7 @@ export default function App() {
               O que há de novo?
             </span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              v2.4.3
+              v2.4.4
             </span>
           </button>
 

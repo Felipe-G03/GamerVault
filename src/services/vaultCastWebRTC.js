@@ -36,7 +36,9 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
   const targetFramerate = parseInt(targetFps, 10) || 60;
 
   let currentStream = mediaStream;
+  let isStopped = false;
   const viewersMap = new Map(); // key: viewerId -> { pc, unsubDoc, unsubCandidates }
+  const pendingViewers = new Set(); // evita setups duplicados enquanto a oferta está sendo criada
 
   const viewersCollectionRef = collection(db, 'vaultcasts', castId, 'viewers');
 
@@ -52,7 +54,7 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
 
       // Espectador solicitou conexão
       if (change.type === 'added' || change.type === 'modified') {
-        if (data.status === 'requesting' && !viewersMap.has(viewerId)) {
+        if (data.status === 'requesting' && !viewersMap.has(viewerId) && !pendingViewers.has(viewerId)) {
           await setupViewerConnection(viewerId, change.doc.ref);
         }
       }
@@ -68,8 +70,13 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
 
   // Configura a conexão WebRTC para um espectador específico
   async function setupViewerConnection(viewerId, viewerDocRef) {
+    if (isStopped) return;
+    pendingViewers.add(viewerId);
+    let pc = null;
+    let unsubDoc = null;
+    let unsubCandidates = null;
     try {
-      const pc = new RTCPeerConnection(ICE_SERVERS);
+      pc = new RTCPeerConnection(ICE_SERVERS);
 
       // Adiciona as tracks atuais (vídeo e áudio) para este espectador
       currentStream.getTracks().forEach((track) => {
@@ -129,13 +136,17 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
         }
       }
 
+      if (isStopped) throw new Error('Transmissão encerrada durante a negociação.');
+
       await updateDoc(viewerDocRef, {
         offer: { type: modifiedOffer.type, sdp: modifiedOffer.sdp },
         status: 'offered'
       });
 
+      if (isStopped) throw new Error('Transmissão encerrada durante a negociação.');
+
       // Escuta a Resposta SDP (Answer) do espectador
-      const unsubDoc = onSnapshot(viewerDocRef, async (docSnap) => {
+      unsubDoc = onSnapshot(viewerDocRef, async (docSnap) => {
         if (!docSnap.exists()) return;
         const d = docSnap.data();
         if (d.answer && !pc.currentRemoteDescription) {
@@ -149,7 +160,7 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
 
       // Escuta os candidatos ICE enviados pelo espectador
       const viewerCandidatesRef = collection(db, 'vaultcasts', castId, 'viewers', viewerId, 'viewerCandidates');
-      const unsubCandidates = onSnapshot(viewerCandidatesRef, (cSnap) => {
+      unsubCandidates = onSnapshot(viewerCandidatesRef, (cSnap) => {
         cSnap.docChanges().forEach(async (cChange) => {
           if (cChange.type === 'added') {
             const cData = cChange.doc.data();
@@ -164,27 +175,38 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
         });
       });
 
+      pendingViewers.delete(viewerId);
       viewersMap.set(viewerId, { pc, unsubDoc, unsubCandidates, viewerDocRef });
       notifyCount();
     } catch (err) {
-      console.error(`Falha ao estabelecer conexão com espectador ${viewerId}:`, err);
+      pendingViewers.delete(viewerId);
+      // Libera tudo que foi alocado até aqui (PeerConnection mantém encoder de vídeo vivo)
+      unsubDoc?.();
+      unsubCandidates?.();
+      try { pc?.close(); } catch (_) {}
+      if (!isStopped) {
+        console.error(`Falha ao estabelecer conexão com espectador ${viewerId}:`, err);
+      }
     }
   }
 
   function cleanupViewer(viewerId) {
     if (!viewersMap.has(viewerId)) return;
     const entry = viewersMap.get(viewerId);
+    viewersMap.delete(viewerId);
     entry.unsubDoc?.();
     entry.unsubCandidates?.();
     try {
+      entry.pc.onicecandidate = null;
+      entry.pc.onconnectionstatechange = null;
       entry.pc?.close();
     } catch (_) {}
-    viewersMap.delete(viewerId);
     notifyCount();
   }
 
   // Permite substituir as tracks de vídeo e áudio dinamicamente ao trocar de janela
   function updateStream(newStream) {
+    if (isStopped) return;
     currentStream = newStream;
     const newVideoTrack = newStream.getVideoTracks()?.[0];
     const newAudioTrack = newStream.getAudioTracks()?.[0];
@@ -216,9 +238,12 @@ export function startBroadcastingWebRTC(castId, mediaStream, onViewerCountChange
 
   // Encerra todas as conexões
   function stop() {
+    if (isStopped) return;
+    isStopped = true;
     unsubViewers?.();
-    viewersMap.forEach((_, viewerId) => cleanupViewer(viewerId));
+    Array.from(viewersMap.keys()).forEach((viewerId) => cleanupViewer(viewerId));
     viewersMap.clear();
+    currentStream = null;
     notifyCount();
   }
 

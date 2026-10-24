@@ -17,6 +17,24 @@ import {
 
 const HIGHLIGHTS = [
   {
+    id: 'vaultcast_memory_opt',
+    icon: ShieldCheck,
+    color: 'from-emerald-500/20 to-teal-500/10 text-emerald-400 border-emerald-500/30',
+    tag: 'DESEMPENHO & RAM',
+    tagColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    title: 'Otimização Crítica de RAM no VaultCast',
+    description: 'Eliminado o acúmulo de memória e capturas residuais ao transmitir janelas de jogos. Encerramento automático e limpeza completa de streams e processos de áudio.'
+  },
+  {
+    id: 'bgm_mute_fix',
+    icon: Sliders,
+    color: 'from-cyan-500/20 to-blue-500/10 text-cyan-400 border-cyan-500/30',
+    tag: 'ÁUDIO & BGM',
+    tagColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    title: 'Correção: Iniciar com Música Silenciada',
+    description: 'Ajustada a sincronização de mudo no boot: a opção "Iniciar com Música Silenciada" agora silencia o som de forma imediata e 100% garantida.'
+  },
+  {
     id: 'overlay_ign_guide',
     icon: Compass,
     color: 'from-red-500/20 to-orange-500/10 text-red-400 border-red-500/30',
@@ -28,29 +46,11 @@ const HIGHLIGHTS = [
   {
     id: 'overlay_clickthrough_fps',
     icon: Gamepad2,
-    color: 'from-emerald-500/20 to-teal-500/10 text-emerald-400 border-emerald-500/30',
+    color: 'from-purple-500/20 to-indigo-500/10 text-purple-400 border-purple-500/30',
     tag: 'IN-GAME OVERLAY 2.0',
-    tagColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    tagColor: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
     title: 'Mini HUD de FPS Click-Through & Ciclo Dinâmico',
     description: 'Alternância perfeita via Alt+O: Mini FPS no canto da tela 100% transparente e impossível de ser clicado (pass-through total), HUD expandido e modo oculto.'
-  },
-  {
-    id: 'game_notes_nofocus',
-    icon: FileText,
-    color: 'from-amber-500/20 to-yellow-500/10 text-amber-400 border-amber-500/30',
-    tag: 'NOTAS DO JOGO',
-    tagColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-    title: 'Bloco de Notas Sem Perda de Foco',
-    description: 'Faça anotações de senhas, coordenadas e builds salvos automaticamente por jogo, com inserção rápida e retorno instantâneo do foco ao jogo pressionando Esc.'
-  },
-  {
-    id: 'hub_playtime_audio',
-    icon: Sliders,
-    color: 'from-cyan-500/20 to-blue-500/10 text-cyan-400 border-cyan-500/30',
-    tag: 'CONTADOR & ÁUDIO',
-    tagColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-    title: 'Tempo de Jogo Contínuo & Início Silenciado',
-    description: 'O Gamer\'s Hub agora registra e acumula com precisão o tempo jogado de cada título. Adicionada opção de iniciar o aplicativo com a música tema silenciada nas Configurações.'
   }
 ];
 
@@ -59,7 +59,7 @@ export default function PatchNotesModal({ onClose }) {
 
   const handleUnderstand = () => {
     try {
-      localStorage.setItem('gamervault_last_patch_seen', '2.4.3');
+      localStorage.setItem('gamervault_last_patch_seen', '2.4.4');
     } catch (_) {}
     onClose();
   };
@@ -82,7 +82,7 @@ export default function PatchNotesModal({ onClose }) {
                   O QUE HÁ DE NOVO
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">
-                  v2.4.3 • In-Game Overlay 2.0 & Detonados
+                  v2.4.4 • Otimização de RAM no VaultCast & Áudio
                 </span>
               </div>
               <h2 className="text-base sm:text-xl font-gamer font-bold text-white tracking-wide">
