@@ -5,12 +5,19 @@ Gamer's Vault - Limpador de Sessões Fantasmas do VaultCast
 Encerra sessões que ficaram presas no Firestore e no LiveKit Cloud.
 """
 
+import os
 import sys
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+# Busca o arquivo de credenciais na raiz do projeto ou no diretório atual
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+cert_path = os.path.join(BASE_DIR, 'firebase-service-account.json')
+if not os.path.exists(cert_path):
+    cert_path = 'firebase-service-account.json'
+
 try:
-    cred = credentials.Certificate('firebase-service-account.json')
+    cred = credentials.Certificate(cert_path)
     firebase_admin.initialize_app(cred)
     db = firestore.client()
 except Exception as e:
